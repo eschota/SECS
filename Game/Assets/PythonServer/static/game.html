@@ -1,0 +1,201 @@
+<!--
+https://renderfin.com/online-game/ - это адрес игры настроенный для работы на этом сервере.
+Авторизация, при первом входе на страницу проверяем куки, если их нет, то создаем нового игрока с рандомным никнеймом и запускаем игру.
+если куки есть, то возвращаем ему игру https://renderfin.com/Game/index.html - это юнити веб билд.
+Справа сверху делаем кнопку Dashboard, при нажатии на нее открывается страница с админ панелью.
+В админ панели есть 3 секции:
+1. Лобби - здесь отображаются все игроки в игре.
+2. Очередь - здесь отображаются все игроки в очереди.
+3. Игры - здесь отображаются все игры.
+4. Тестирование API - здесь можно тестировать все API.
+5. Логи - здесь отображаются логи всех API запросов.
+
+
+
+
+
+
+
+-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Portal -ывфыв Виртуальная игрфывфывфывовая вселенная</title>
+    <link rel="stylesheet" href="https://renderfin.com/online-game/game.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Фон с анимированными частицами -->
+    <div class="particles-bg">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Экран авторизации -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-container">
+            <div class="logo-section">
+                <div class="logo">
+                    <div class="logo-icon">🎮</div>
+                    <h1 class="logo-text">GAME PORTAL</h1>
+                </div>
+                <div class="logo-subtitle">Виртуальная игровая вселенная</div>
+            </div>
+
+            <div class="auth-form">
+                <div class="form-header">
+                    <h2>Добро пожаловать</h2>
+                    <p>Создайте свой игровой профиль</p>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <input type="text" id="username-input" placeholder="Введите имя игрока" maxlength="20">
+                        <div class="input-border"></div>
+                        <div class="input-glow"></div>
+                    </div>
+                    <div class="input-hint">Имя должно содержать от 3 до 20 символов</div>
+                </div>
+
+                <div class="avatar-selection">
+                    <h3>Выберите аватар</h3>
+                    <div class="avatar-grid">
+                        <div class="avatar-option" data-avatar="1">👤</div>
+                        <div class="avatar-option" data-avatar="2">🤖</div>
+                        <div class="avatar-option" data-avatar="3">👾</div>
+                        <div class="avatar-option" data-avatar="4">🦄</div>
+                        <div class="avatar-option" data-avatar="5">🐉</div>
+                        <div class="avatar-option" data-avatar="6">⚡</div>
+                    </div>
+                </div>
+
+                <button id="start-game-btn" class="start-btn" disabled>
+                    <span class="btn-text">НАЧАТЬ ИГРУ</span>
+                    <div class="btn-glow"></div>
+                </button>
+
+                <div class="loading-indicator" id="loading-indicator">
+                    <div class="spinner"></div>
+                    <span>Подключение к серверу...</span>
+                </div>
+            </div>
+
+            <div class="auth-footer">
+                <div class="server-status">
+                    <span class="status-dot"></span>
+                    <span id="server-status-text">Проверка соединения...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран игры (скрыт по умолчанию) -->
+    <div id="game-screen" class="game-screen" style="display: none;">
+        <div class="game-header">
+            <div class="player-info">
+                <div class="player-avatar" id="player-avatar">👤</div>
+                <div class="player-details">
+                    <h3 id="player-name">Игрок</h3>
+                    <span class="player-id" id="player-id">ID: ---</span>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button id="dashboard-btn" class="dashboard-btn">
+                    <span>📊</span>
+                    <span>Dashboard</span>
+                </button>
+                <button id="logout-btn" class="logout-btn">
+                    <span>🚪</span>
+                    <span>Выход</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="game-content">
+            <div class="game-frame-container">
+                <iframe id="unity-game-frame" src="/unity-game/" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard панель (скрыта по умолчанию) -->
+    <div id="dashboard-panel" class="dashboard-panel" style="display: none;">
+        <div class="dashboard-header">
+            <h2>Админ панель</h2>
+            <button id="close-dashboard" class="close-btn">✕</button>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="dashboard-section">
+                <h3>Лобби</h3>
+                <div class="section-controls">
+                    <button id="refresh-lobby">Обновить</button>
+                    <button id="create-user">Создать пользователя</button>
+                </div>
+                <div id="lobby-users" class="data-list">
+                    <p>Загрузка пользователей...</p>
+                </div>
+            </div>
+
+            <div class="dashboard-section">
+                <h3>Очередь</h3>
+                <div class="section-controls">
+                    <button id="refresh-queue">Обновить</button>
+                    <button id="join-queue">Присоединиться</button>
+                </div>
+                <div id="queue-users" class="data-list">
+                    <p>Загрузка очереди...</p>
+                </div>
+            </div>
+
+            <div class="dashboard-section">
+                <h3>Игры</h3>
+                <div class="section-controls">
+                    <button id="refresh-games">Обновить</button>
+                    <button id="create-game">Создать игру</button>
+                </div>
+                <div id="games-list" class="data-list">
+                    <p>Загрузка игр...</p>
+                </div>
+            </div>
+
+            <div class="dashboard-section">
+                <h3>Тестирование API</h3>
+                <div class="section-controls">
+                    <button id="test-all-apis">Тест всех API</button>
+                    <button id="clear-logs">Очистить логи</button>
+                </div>
+                <div id="api-logs" class="api-logs">
+                    <p>Логи API запросов появятся здесь...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://renderfin.com/online-game/game.js"></script>
+</body>
+</html> 
