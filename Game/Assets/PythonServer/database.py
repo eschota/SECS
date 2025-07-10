@@ -154,6 +154,17 @@ class GameDatabase:
         
         return self.dict_from_row(row)
     
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Получение пользователя по email"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        return self.dict_from_row(row)
+    
     def update_user(self, user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Обновление данных пользователя"""
         conn = self.get_connection()

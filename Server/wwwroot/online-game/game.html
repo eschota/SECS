@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SECS - Space Epic Combat Simulator</title>
+    <link rel="stylesheet" href="game.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+    <div class="clouds"></div>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1 class="game-title">SECS</h1>
+                <p class="game-subtitle">Space Epic Combat Simulator</p>
+            </div>
+            <div class="server-status">
+                <div id="serverStatus" class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Проверка сервера...</span>
+                </div>
+            </div>
+        </header>
+        <main class="main-content">
+            <!-- AUTH/REGISTER SECTION -->
+            <section id="authSection" class="auth-section">
+                <div class="tabs">
+                    <button id="loginTab" class="tab active">Вход</button>
+                    <button id="registerTab" class="tab">Регистрация</button>
+                </div>
+                <form id="loginForm" class="auth-form">
+                    <input type="email" id="loginEmail" class="auth-input" placeholder="Email" required autocomplete="username">
+                    <input type="password" id="loginPassword" class="auth-input" placeholder="Пароль" required autocomplete="current-password">
+                    <button type="submit" class="auth-btn">Войти</button>
+                </form>
+                <form id="registerForm" class="auth-form hidden">
+                    <input type="email" id="registerEmail" class="auth-input" placeholder="Email" required autocomplete="username">
+                    <input type="password" id="registerPassword" class="auth-input" placeholder="Пароль (мин. 6 символов)" required minlength="6" autocomplete="new-password">
+                    <input type="text" id="registerNick" class="auth-input" placeholder="Никнейм (по умолчанию Player N)">
+                    <input type="url" id="registerAvatar" class="auth-input" placeholder="URL аватара (опционально)">
+                    <button type="submit" class="auth-btn">Зарегистрироваться</button>
+                </form>
+            </section>
+            <!-- PROFILE SECTION -->
+            <section id="profileSection" class="profile-section hidden">
+                <div class="profile-card">
+                    <img id="profileAvatar" class="profile-avatar" src="" alt="Avatar" onerror="this.src='https://www.gravatar.com/avatar/?d=mp'">
+                    <div class="profile-info">
+                        <h2 class="welcome-text">Привет, <span id="profileNick">Player</span>!</h2>
+                        <div class="profile-fields">
+                            <input type="text" id="editNick" class="profile-input" placeholder="Изменить никнейм" maxlength="20">
+                            <input type="url" id="editAvatar" class="profile-input" placeholder="URL аватара">
+                            <button id="saveProfileBtn" class="profile-btn">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="play-section">
+                    <button id="playNowBtn" class="play-now-btn">
+                        <span class="btn-text">PLAY NOW</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+                <button id="logoutBtn" class="logout-btn">Выйти</button>
+            </section>
+            <!-- GAME INFO -->
+            <section class="game-info">
+                <div class="info-card">
+                    <h3>Космические сражения</h3>
+                    <p>Погрузитесь в эпические космические битвы</p>
+                </div>
+                <div class="info-card">
+                    <h3>Многопользовательская игра</h3>
+                    <p>Сражайтесь с игроками со всего мира</p>
+                </div>
+                <div class="info-card">
+                    <h3>Футуристичная графика</h3>
+                    <p>Потрясающие визуальные эффекты</p>
+                </div>
+            </section>
+        </main>
+        <footer class="footer">
+            <!-- LIVE STATISTICS SECTION -->
+            <section class="stats-section">
+                <div class="stats-container">
+                    <h2 class="stats-title">📊 Статистика игры</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-number" id="totalPlayers">-</div>
+                            <div class="stat-label">Зарегистрировано игроков</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🟢</div>
+                            <div class="stat-number" id="onlinePlayers">-</div>
+                            <div class="stat-label">Игроков онлайн</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚔️</div>
+                            <div class="stat-number" id="totalMatches">-</div>
+                            <div class="stat-label">Проведено матчей</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔥</div>
+                            <div class="stat-number" id="liveMatches">-</div>
+                            <div class="stat-label">Матчей в игре</div>
+                        </div>
+                    </div>
+                    <div class="stats-update">
+                        <span class="update-text">Обновлено: <span id="lastUpdate">-</span></span>
+                        <div class="update-indicator" id="updateIndicator"></div>
+                    </div>
+                </div>
+            </section>
+            <div class="footer-info">
+                <p>&copy; 2024 SECS - Space Epic Combat Simulator</p>
+            </div>
+        </footer>
+    </div>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Загрузка...</p>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
+
+
+

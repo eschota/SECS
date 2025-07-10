@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-07-10T13:35:28.238375",
+  "total_bots": 89,
+  "online_bots": 89,
+  "offline_bots": 0,
+  "in_queue_bots": 0,
+  "in_match_bots": 0,
+  "idle_bots": 89,
+  "active_24h": 89,
+  "active_1h": 89,
+  "total_games": 0,
+  "total_wins": 0,
+  "total_score": 0,
+  "avg_games_per_bot": 0.0,
+  "avg_wins_per_bot": 0.0,
+  "avg_score_per_bot": 0.0,
+  "win_rate": 0,
+  "match_types": {
+    "1v1": 0,
+    "2v2": 0,
+    "FFA": 0
+  }
+}
