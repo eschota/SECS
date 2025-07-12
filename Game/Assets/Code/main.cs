@@ -7,14 +7,31 @@ using UnityEngine.Networking;
 public class main : MonoBehaviour
 {
     public static main Instance { get; private set; }
+    
+    // API URLs согласно новой документации
+    public static string BaseUrl = "https://renderfin.com";
+    public static string PlayerUrl = "https://renderfin.com/api-game-player/";
     public static string QueueUrl = "https://renderfin.com/api-game-queue/";
-    public static string GameUrl = "https://renderfin.com/api-game-game/";
+    public static string MatchUrl = "https://renderfin.com/api-game-match/";
+    public static string LobbyUrl = "https://renderfin.com/api-game-lobby/";
+    public static string StatsUrl = "https://renderfin.com/api-game-statistics/";
+    public static string AdminUrl = "https://renderfin.com/api-game-admin/";
+    
+    // Development/Production server fallback
+    public static string[] PossibleServers = {
+        "https://renderfin.com",
+        "https://localhost:7000",
+        "http://localhost:5000"
+    };
+    
     public static Lobby lobby;
 
     public static event Action<State> ChangeState;
     public enum State
     {
         Server_connect,
+        PlayerRegistration,
+        PlayerLogin,
         Lobby,
         Search,
         MatchFound,
@@ -44,7 +61,11 @@ public class main : MonoBehaviour
         switch (state)
         {
             case State.Server_connect:
-            CheckServerConnection();
+                CheckServerConnection();
+                break;
+            case State.PlayerRegistration:
+                break;
+            case State.PlayerLogin:
                 break;
             case State.Lobby:
                 break;
@@ -56,15 +77,62 @@ public class main : MonoBehaviour
     }
     IEnumerator CheckServerConnectionRoutine()
     {
-        UnityWebRequest request = UnityWebRequest.Get("https://renderfin.com/api-game-lobby");
-        yield return request.SendWebRequest();
-        if (request.result != UnityWebRequest.Result.Success)
+        bool serverFound = false;
+        
+        // Try to find an available server
+        foreach (string serverUrl in PossibleServers)
         {
-            Debug.LogError("Server connection failed: " + request.error);
+            Debug.Log($"[main] Trying server: {serverUrl}");
+            UnityWebRequest request = UnityWebRequest.Get(serverUrl + "/api-game-statistics/");
+            
+            // Bypass certificate validation for development
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            request.certificateHandler = new BypassCertificate();
+            #endif
+            
+            yield return request.SendWebRequest();
+            
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log($"[main] Server available: {serverUrl}");
+                // Update all URLs to use this server
+                UpdateServerUrls(serverUrl);
+                serverFound = true;
+                break;
+            }
+            else
+            {
+                Debug.LogWarning($"[main] Server unavailable: {serverUrl} - {request.error}");
+            }
+        }
+        
+        if (!serverFound)
+        {
+            Debug.LogError("[main] No available servers found!");
             yield break;
         }
+        
         yield return new WaitForSeconds(1f);
-        SetState(State.Lobby);
+        SetState(State.PlayerRegistration);
+    }
+    
+    private void UpdateServerUrls(string serverUrl)
+    {
+        BaseUrl = serverUrl;
+        PlayerUrl = serverUrl + "/api-game-player/";
+        QueueUrl = serverUrl + "/api-game-queue/";
+        MatchUrl = serverUrl + "/api-game-match/";
+        LobbyUrl = serverUrl + "/api-game-lobby/";
+        StatsUrl = serverUrl + "/api-game-statistics/";
+        AdminUrl = serverUrl + "/api-game-admin/";
+        
+        Debug.Log($"[main] Updated server URLs to: {BaseUrl}");
+    }
+    
+    // Certificate handler for development
+    private class BypassCertificate : CertificateHandler
+    {
+        protected override bool ValidateCertificate(byte[] certificateData) => true;
     }
     void Awake()
     {
