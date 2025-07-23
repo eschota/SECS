@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: _mat_frid_ship
+  m_Name: _mat_frid_wall
   m_Shader: {fileID: 4800000, guid: a4b3914c7721d1d4983912c0952df289, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -116,22 +116,22 @@ Material:
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
     - _FadeCurvePower: 2
-    - _FadeRadius: 50
+    - _FadeRadius: 5
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _GridAlpha: 1
+    - _GridAlpha: 0.568
     - _GridSize: 500
-    - _LineWidth: 0.01
+    - _LineWidth: 0.275
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _PulseColor: 1
+    - _PulseColor: 0
     - _PulseColorMax: 0
     - _PulseColorMin: 0
     - _PulseColorSpeed: 1
-    - _PulseRadius: 0.104
-    - _PulseRadiusSpeed: 3
+    - _PulseRadius: 0
+    - _PulseRadiusSpeed: 1
     - _PulseSpeed: 10
     - _QueueOffset: 0
     - _ReceiveShadows: 1
@@ -149,10 +149,10 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FadeCenter: {r: 49.502598, g: -8.6449506e-16, b: 38.933395, a: 0}
-    - _FadeColor: {r: 0, g: 0, b: 0, a: 0}
-    - _GridColor: {r: 0, g: 1, b: 1, a: 0.5372549}
-    - _PulseColorAlt: {r: 0, g: 0, b: 0, a: 0.44705883}
+    - _FadeCenter: {r: 49.76735, g: -8.683469e-16, b: 39.106865, a: 0}
+    - _FadeColor: {r: 0.011792451, g: 0.06922869, b: 0.5, a: 1}
+    - _GridColor: {r: 0.01775543, g: 0.1792453, b: 0.1792453, a: 0}
+    - _PulseColorAlt: {r: 1, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

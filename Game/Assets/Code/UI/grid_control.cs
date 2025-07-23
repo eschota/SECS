@@ -108,7 +108,7 @@ public class grid_control : MonoBehaviour
             // Отладочная информация
             if (Time.frameCount % 60 == 0) // Каждую секунду
             {
-                Debug.Log($"Mouse world position: {mouseWorldPosition}");
+//                Debug.Log($"Mouse world position: {mouseWorldPosition}");
             }
         }
         else
@@ -165,7 +165,7 @@ public class grid_control : MonoBehaviour
         // Отладочная информация
         if (Time.frameCount % 60 == 0) // Каждую секунду
         {
-            Debug.Log($"Shader params - UseMouseFade: {useMouseFade}, FadeCenter: {mouseWorldPosition}, FadeRadius: {fadeRadius}");
+            //Debug.Log($"Shader params - UseMouseFade: {useMouseFade}, FadeCenter: {mouseWorldPosition}, FadeRadius: {fadeRadius}");
         }
     }
 #endif
