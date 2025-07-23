@@ -11,7 +11,6 @@ public class GameDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<GameMatch> GameMatches { get; set; }
-    public DbSet<MatchQueue> MatchQueues { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,10 +72,6 @@ public class GameDbContext : DbContext
             .Property(u => u.MmrFourPlayerFFA)
             .HasDefaultValue(500);
 
-        modelBuilder.Entity<User>()
-            .Property(u => u.IsInQueue)
-            .HasDefaultValue(false);
-
         // Настройка модели GameMatch
         modelBuilder.Entity<GameMatch>()
             .Property(m => m.MatchId)
@@ -88,41 +83,14 @@ public class GameDbContext : DbContext
 
         modelBuilder.Entity<GameMatch>()
             .Property(m => m.MatchMaxTimeLimit)
-            .HasDefaultValue(60.0f);
+            .HasDefaultValue(600.0f);
 
         modelBuilder.Entity<GameMatch>()
             .Property(m => m.Status)
             .HasDefaultValue(GameMatchStatus.InProgress);
 
-        // Настройка модели MatchQueue
-        modelBuilder.Entity<MatchQueue>()
-            .Property(mq => mq.QueueId)
-            .ValueGeneratedOnAdd();
-
-        modelBuilder.Entity<MatchQueue>()
-            .Property(mq => mq.JoinTime)
-            .HasDefaultValueSql("datetime('now')");
-
-        modelBuilder.Entity<MatchQueue>()
-            .Property(mq => mq.SearchThreshold)
-            .HasDefaultValue(20);
-
         // Индексы для производительности
-        modelBuilder.Entity<MatchQueue>()
-            .HasIndex(mq => mq.UserId)
-            .IsUnique();
-
-        modelBuilder.Entity<MatchQueue>()
-            .HasIndex(mq => new { mq.MatchType, mq.MmrRating });
-
         modelBuilder.Entity<GameMatch>()
             .HasIndex(m => m.Status);
-
-        // Внешние ключи
-        modelBuilder.Entity<MatchQueue>()
-            .HasOne(mq => mq.User)
-            .WithMany()
-            .HasForeignKey(mq => mq.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 } 

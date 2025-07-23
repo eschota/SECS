@@ -40,7 +40,6 @@ class UnifiedBotsManager:
         self.base_url = "https://renderfin.com"
         self.register_endpoint = f"{self.base_url}/api-game-player"
         self.login_endpoint = f"{self.base_url}/api-game-player/login"
-        self.heartbeat_endpoint = f"{self.base_url}/api-game-player/heartbeat"
         self.queue_endpoint = f"{self.base_url}/api-game-queue"
         self.match_endpoint = f"{self.base_url}/api-game-match"
         
@@ -305,44 +304,46 @@ class UnifiedBotsManager:
             logging.error(f"❌ Исключение при авторизации бота {bot_id}: {e}")
             return False
 
-    def send_heartbeat(self, bot_id: str, bot_data: Dict) -> bool:
-        """💓 Отправляет heartbeat для бота"""
+    def check_bot_status(self, bot_id: str, bot_data: Dict) -> bool:
+        """💓 Проверяет статус бота (автоматически обновляет heartbeat на сервере)"""
         try:
             user_id = bot_data["id"]
             
-            heartbeat_data = {
-                "userId": user_id,
-                "timestamp": datetime.now().isoformat()
-            }
-            
-            response = self.session.post(
-                self.heartbeat_endpoint,
-                json=heartbeat_data,
+            # Просто запрашиваем статус игрока - сервер автоматически обновит heartbeat
+            response = self.session.get(
+                f"{self.register_endpoint}/{user_id}",
                 timeout=10
             )
             
             if response.status_code == 200:
+                user_data = response.json()
+                # Обновляем локальные данные бота
                 with self.lock:
                     self.bots_data[bot_id]["last_heartbeat"] = datetime.now().isoformat()
                     self.bots_data[bot_id]["status"] = "online"
+                    # Обновляем игровые данные если они изменились
+                    self.bots_data[bot_id]["games_played"] = user_data.get("gamesPlayed", 0)
+                    self.bots_data[bot_id]["games_won"] = user_data.get("gamesWon", 0)
+                    self.bots_data[bot_id]["score"] = user_data.get("score", 0)
+                    self.bots_data[bot_id]["level"] = user_data.get("level", 1)
                 return True
             else:
-                logging.warning(f"⚠️ Ошибка heartbeat для бота {bot_data['username']}: {response.status_code}")
+                logging.warning(f"⚠️ Ошибка проверки статуса бота {bot_data['username']}: {response.status_code}")
                 return False
                 
         except Exception as e:
-            logging.error(f"❌ Исключение при отправке heartbeat для бота {bot_id}: {e}")
+            logging.error(f"❌ Исключение при проверке статуса бота {bot_id}: {e}")
             return False
 
-    def send_all_heartbeats(self) -> int:
-        """💓 Отправляет heartbeat для всех ботов"""
+    def check_all_bots_status(self) -> int:
+        """💓 Проверяет статус всех ботов (автоматически обновляет heartbeat на сервере)"""
         success_count = 0
         
         with ThreadPoolExecutor(max_workers=20) as executor:
             futures = []
             
             for bot_id, bot_data in self.bots_data.items():
-                future = executor.submit(self.send_heartbeat, bot_id, bot_data)
+                future = executor.submit(self.check_bot_status, bot_id, bot_data)
                 futures.append((bot_id, future))
             
             for bot_id, future in futures:
@@ -351,7 +352,7 @@ class UnifiedBotsManager:
                         success_count += 1
                         self.activity_stats["heartbeats_sent"] += 1
                 except Exception as e:
-                    logging.error(f"❌ Ошибка heartbeat для бота {bot_id}: {e}")
+                    logging.error(f"❌ Ошибка проверки статуса бота {bot_id}: {e}")
                     self.activity_stats["errors"] += 1
         
         return success_count
@@ -448,36 +449,127 @@ class UnifiedBotsManager:
             return False
 
     def sync_queue_status(self, bot_id: str, bot_data: Dict) -> bool:
-        """🔄 Синхронизирует состояние очереди бота с сервером"""
+        """🔄 Синхронизирует статус очереди бота"""
         try:
             user_id = bot_data["id"]
-            bot_name = bot_data.get("username", "Unknown")
             
-            # Проверяем статус очереди через API
+            # Получаем статус очереди для бота
             response = self.session.get(
-                f"{self.queue_endpoint}/{user_id}/status",
-                timeout=5
+                f"{self.base_url}/api-game-queue/{user_id}/status",
+                timeout=10
             )
             
             if response.status_code == 200:
-                server_status = response.json()
-                server_in_queue = server_status.get("inQueue", False)
-                local_in_queue = bot_data.get("in_queue", False)
+                queue_data = response.json()
                 
-                # Если состояния не совпадают - синхронизируем
-                if server_in_queue != local_in_queue:
-                    logging.warning(f"🔄 Синхронизация очереди для {bot_name}: сервер={server_in_queue}, локально={local_in_queue}")
-                    with self.lock:
-                        self.bots_data[bot_id]["in_queue"] = server_in_queue
-                        if not server_in_queue:
-                            self.bots_data[bot_id]["queue_join_time"] = None
-                            self.bots_data[bot_id]["current_match_type"] = None
-                    return True
+                with self.lock:
+                    self.bots_data[bot_id]["queue_status"] = queue_data
                     
-            return False
-            
+                    # Если матч найден, обновляем статус
+                    if queue_data.get("matchFound", False):
+                        self.bots_data[bot_id]["match_found"] = True
+                        self.bots_data[bot_id]["match_id"] = queue_data.get("matchId")
+                        self.bots_data[bot_id]["match_start_time"] = datetime.now().isoformat()
+                        logging.info(f"🎯 Бот {bot_data['username']} найден матч {queue_data.get('matchId')}")
+                    
+                    # Если не в очереди, сбрасываем флаг
+                    if not queue_data.get("inQueue", False):
+                        self.bots_data[bot_id]["in_queue"] = False
+                        
+                return True
+            else:
+                logging.warning(f"⚠️ Ошибка синхронизации очереди для бота {bot_data['username']}: {response.status_code}")
+                return False
+                
         except Exception as e:
-            logging.error(f"❌ Ошибка синхронизации очереди для бота {bot_id}: {e}")
+            logging.error(f"❌ Исключение при синхронизации очереди бота {bot_id}: {e}")
+            return False
+
+    def check_and_finish_match(self, bot_id: str, bot_data: Dict) -> bool:
+        """🏁 Проверяет и завершает матч бота если он длится слишком долго"""
+        try:
+            user_id = bot_data["id"]
+            
+            # Проверяем, есть ли активный матч
+            response = self.session.get(
+                f"{self.base_url}/api-game-match/user/{user_id}",
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                matches_data = response.json()
+                
+                if matches_data and len(matches_data) > 0:
+                    match = matches_data[0]  # Первый активный матч
+                    match_id = match.get("matchId")
+                    
+                    if match_id and match.get("status") == "InProgress":
+                        # Проверяем, когда матч начался
+                        match_start_time = bot_data.get("match_start_time")
+                        if match_start_time:
+                            start_time = datetime.fromisoformat(match_start_time)
+                            now = datetime.now()
+                            match_duration = (now - start_time).total_seconds()
+                            
+                            # Если матч идет больше 30-90 секунд, завершаем его
+                            if match_duration > random.randint(30, 90):
+                                return self.finish_match(bot_id, bot_data, match_id, match)
+                        else:
+                            # Если нет времени начала, устанавливаем его
+                            with self.lock:
+                                self.bots_data[bot_id]["match_start_time"] = datetime.now().isoformat()
+                                
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            logging.error(f"❌ Исключение при проверке матча бота {bot_id}: {e}")
+            return False
+
+    def finish_match(self, bot_id: str, bot_data: Dict, match_id: int, match_data: Dict) -> bool:
+        """🏁 Завершает матч бота со случайным результатом"""
+        try:
+            players_list = match_data.get("playersId", "[]")
+            if isinstance(players_list, str):
+                import json
+                players_list = json.loads(players_list)
+            
+            if not players_list:
+                logging.warning(f"⚠️ Нет игроков в матче {match_id}")
+                return False
+                
+            # Выбираем случайного победителя
+            winner_id = random.choice(players_list)
+            losers = [p for p in players_list if p != winner_id]
+            
+            finish_data = {
+                "Winners": [winner_id],
+                "Losers": losers
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/api-game-match/{match_id}/finish",
+                json=finish_data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                logging.info(f"🏆 Бот {bot_data['username']} завершил матч {match_id}. Победитель: {winner_id}")
+                
+                # Очищаем данные о матче
+                with self.lock:
+                    self.bots_data[bot_id]["match_found"] = False
+                    self.bots_data[bot_id]["match_id"] = None
+                    self.bots_data[bot_id]["match_start_time"] = None
+                    
+                return True
+            else:
+                logging.error(f"❌ Ошибка завершения матча {match_id} для бота {bot_data['username']}: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logging.error(f"❌ Исключение при завершении матча бота {bot_id}: {e}")
             return False
 
     def simulate_bot_behavior(self, bot_id: str, bot_data: Dict) -> bool:
@@ -573,8 +665,8 @@ class UnifiedBotsManager:
         """🎮 Выполняет один цикл активности ботов"""
         logging.info("🔄 Запуск цикла активности ботов...")
         
-        # Отправляем heartbeat для всех ботов
-        heartbeat_success = self.send_all_heartbeats()
+        # Проверяем статус всех ботов (автоматически обновляет heartbeat на сервере)
+        heartbeat_success = self.check_all_bots_status()
         
         # Подсчитываем онлайн ботов
         online_bots = [bot_id for bot_id, bot_data in self.bots_data.items() if bot_data.get("status") == "online"]
@@ -597,10 +689,28 @@ class UnifiedBotsManager:
                 except Exception as e:
                     logging.error(f"❌ Ошибка симуляции поведения бота {bot_id}: {e}")
         
+        # Проверяем и завершаем матчи ботов
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            match_futures = []
+            
+            for bot_id in online_bots:
+                bot_data = self.bots_data[bot_id]
+                future = executor.submit(self.check_and_finish_match, bot_id, bot_data)
+                match_futures.append((bot_id, future))
+            
+            match_results = []
+            for bot_id, future in match_futures:
+                try:
+                    result = future.result(timeout=15)
+                    match_results.append(result)
+                except Exception as e:
+                    logging.error(f"❌ Ошибка проверки матча бота {bot_id}: {e}")
+        
         actions_count = sum(1 for r in behavior_results if r)
+        matches_processed = sum(1 for r in match_results if r)
         in_queue_count = sum(1 for bot in self.bots_data.values() if bot.get("in_queue", False))
         
-        logging.info(f"🎯 Действий выполнено: {actions_count}, В очереди: {in_queue_count}")
+        logging.info(f"🎯 Действий выполнено: {actions_count}, Матчей обработано: {matches_processed}, В очереди: {in_queue_count}")
         
         # Сохраняем данные
         self.save_bots_data()
@@ -608,6 +718,7 @@ class UnifiedBotsManager:
         return {
             "heartbeat_success": heartbeat_success,
             "behavior_actions": actions_count,
+            "matches_processed": matches_processed,
             "total_bots": len(self.bots_data),
             "online_bots": len(online_bots),
             "in_queue": in_queue_count
@@ -681,17 +792,25 @@ class UnifiedBotsManager:
         if queue_stats:
             print(f"📊 Очереди: 1v1={queue_stats.get('oneVsOne', 0)}, 2v2={queue_stats.get('twoVsTwo', 0)}, FFA={queue_stats.get('fourPlayerFFA', 0)}")
 
-    def run_continuous_activity(self, duration_minutes: int = 30):
-        """🔄 Запускает непрерывную активность ботов"""
-        logging.info(f"🎮 Запуск непрерывной активности ботов на {duration_minutes} минут...")
-        
-        start_time = datetime.now()
-        end_time = start_time + timedelta(minutes=duration_minutes)
+    def run_continuous_activity(self, duration_minutes: int = None):
+        """🔄 Запускает непрерывную активность ботов (бесконечно или с ограничением по времени)"""
+        if duration_minutes is None:
+            logging.info("🎮 Запуск БЕСКОНЕЧНОЙ активности ботов (остановка только через Ctrl+C)...")
+            infinite_mode = True
+        else:
+            logging.info(f"🎮 Запуск непрерывной активности ботов на {duration_minutes} минут...")
+            start_time = datetime.now()
+            end_time = start_time + timedelta(minutes=duration_minutes)
+            infinite_mode = False
         
         cycle_count = 0
         
-        while datetime.now() < end_time:
+        while True:
             try:
+                # Проверяем условие завершения только если не в бесконечном режиме
+                if not infinite_mode and datetime.now() >= end_time:
+                    break
+                
                 cycle_count += 1
                 logging.info(f"🔄 Цикл #{cycle_count}")
                 
@@ -704,6 +823,10 @@ class UnifiedBotsManager:
                 # Отображаем статистику каждые 5 циклов
                 if cycle_count % 5 == 0:
                     self.display_statistics(cycle_results, queue_stats)
+                
+                # Показываем краткую информацию о работе каждые 50 циклов
+                if cycle_count % 50 == 0:
+                    logging.info(f"🚀 Менеджер ботов работает стабильно! Выполнено {cycle_count} циклов")
                 
                 # Пауза между циклами (МИНИМАЛЬНАЯ для максимальной активности)
                 time.sleep(4)
@@ -799,9 +922,9 @@ class UnifiedBotsManager:
         # Инициализируем ботов
         self.initialize_bots()
         
-        # Отправляем начальный heartbeat
-        logging.info("💓 Отправка heartbeat для всех ботов...")
-        heartbeat_success = self.send_all_heartbeats()
+        # Проверяем статус всех ботов
+        logging.info("💓 Проверка статуса всех ботов...")
+        heartbeat_success = self.check_all_bots_status()
         
         # Принудительная синхронизация всех состояний
         self.sync_all_queue_states()
@@ -812,8 +935,9 @@ class UnifiedBotsManager:
         # Выводим статистику
         self.display_statistics()
         
-        # Запускаем непрерывную активность с более коротким циклом
-        self.run_continuous_activity(30)
+        # Запускаем БЕСКОНЕЧНУЮ активность (остановка только через Ctrl+C)
+        logging.info("🚀 Переход в режим непрерывной работы...")
+        self.run_continuous_activity()  # Без параметра = бесконечный режим
         
         logging.info("✅ Менеджер ботов завершил работу!")
 
@@ -822,7 +946,7 @@ def main():
     """🎯 Главная функция"""
     print("""
     ╔════════════════════════════════════════════════════════════════════════════════════════╗
-    ║                       🎮 SECS Unified Bot Manager v2.0                                ║
+    ║                       🎮 SECS Unified Bot Manager v2.1                                ║
     ║                     Space Epic Combat Simulator                                        ║
     ╠════════════════════════════════════════════════════════════════════════════════════════╣
     ║ Единый менеджер ботов с полным функционалом:                                          ║
@@ -831,6 +955,11 @@ def main():
     ║   • Матчмейкинг и очереди                                                              ║
     ║   • Различные типы поведения ботов                                                     ║
     ║   • Подробная статистика и мониторинг                                                  ║
+    ║                                                                                        ║
+    ║ 🔄 БЕСКОНЕЧНЫЙ РЕЖИМ РАБОТЫ:                                                          ║
+    ║   • Работает 24/7 пока не будет остановлен вручную                                   ║
+    ║   • Остановка только через Ctrl+C                                                     ║
+    ║   • Автоматическое восстановление после ошибок                                        ║
     ║                                                                                        ║
     ║ 🚀 Готов к космическим сражениям!                                                      ║
     ╚════════════════════════════════════════════════════════════════════════════════════════╝

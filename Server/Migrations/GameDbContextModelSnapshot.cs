@@ -35,7 +35,7 @@ namespace Server.Migrations
                     b.Property<float>("MatchMaxTimeLimit")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("REAL")
-                        .HasDefaultValue(60f);
+                        .HasDefaultValue(600f);
 
                     b.Property<int>("MatchType")
                         .HasColumnType("INTEGER");
@@ -68,41 +68,6 @@ namespace Server.Migrations
                     b.ToTable("GameMatches");
                 });
 
-            modelBuilder.Entity("Server.Models.MatchQueue", b =>
-                {
-                    b.Property<int>("QueueId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("JoinTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("datetime('now')");
-
-                    b.Property<int>("MatchType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MmrRating")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SearchThreshold")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(20);
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("QueueId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.HasIndex("MatchType", "MmrRating");
-
-                    b.ToTable("MatchQueues");
-                });
-
             modelBuilder.Entity("Server.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -117,9 +82,6 @@ namespace Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("datetime('now')");
-
-                    b.Property<int?>("CurrentMatchId")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -140,11 +102,6 @@ namespace Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
-
-                    b.Property<bool>("IsInQueue")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(false);
 
                     b.Property<DateTime?>("LastHeartbeat")
                         .HasColumnType("TEXT");
@@ -206,17 +163,6 @@ namespace Server.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("Server.Models.MatchQueue", b =>
-                {
-                    b.HasOne("Server.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

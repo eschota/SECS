@@ -2,9 +2,17 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
+using Server.Models;
 using Server.Services;
+using NLog;
+using NLog.Web;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Setup NLog logging
+var logger = NLog.LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+builder.Logging.ClearProviders();
+builder.Host.UseNLog();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -18,6 +26,7 @@ builder.Services.AddDbContext<GameDbContext>(options =>
 
 // Add custom services
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<InMemoryMatchmakingService>();
 builder.Services.AddHostedService<MatchmakingService>();
 
 // Add CORS policy for game clients
@@ -74,35 +83,39 @@ async Task CleanupInactivePlayersOnStartup(WebApplication app)
         var context = scope.ServiceProvider.GetRequiredService<GameDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-        // Очищаем всю очередь при запуске (так как все игроки неактивны)
-        var allQueueEntries = await context.MatchQueues.Include(q => q.User).ToListAsync();
+        // 1. ОЧИЩАЕМ ВСЕ АКТИВНЫЕ МАТЧИ ПРИ ЗАПУСКЕ
+        var activeMatches = await context.GameMatches
+            .Where(m => m.Status == GameMatchStatus.InProgress)
+            .ToListAsync();
         
-        if (allQueueEntries.Any())
+        if (activeMatches.Any())
         {
-            // Удаляем все записи из очереди
-            context.MatchQueues.RemoveRange(allQueueEntries);
-            
-            // Обновляем статус всех игроков
-            foreach (var entry in allQueueEntries)
+            foreach (var match in activeMatches)
             {
-                entry.User.IsInQueue = false;
-                entry.User.IsActive = false;
+                match.Status = GameMatchStatus.Cancelled;
+                match.EndTime = DateTime.UtcNow;
+                logger.LogInformation($"🗑️ Cancelled active match {match.MatchId} (type: {match.MatchType}) at startup");
             }
             
-            await context.SaveChangesAsync();
-            
-            logger.LogInformation($"🧹 Startup cleanup: Removed {allQueueEntries.Count} inactive players from queue");
+            logger.LogInformation($"🧹 Startup cleanup: Cancelled {activeMatches.Count} active matches");
         }
-        else
-        {
-            logger.LogInformation("🧹 Startup cleanup: Queue is already empty");
-        }
+        
+        // 2. ОЧИЩАЕМ ВСЕХ ИГРОКОВ ОТ МАТЧЕЙ ПРИ ЗАПУСКЕ (больше не нужно, так как CurrentMatchId убрали)
+        logger.LogInformation("🧹 Startup cleanup: Skipping player match cleanup (CurrentMatchId removed from model)");
+
+        // 3. ОЧЕРЕДЬ ТЕПЕРЬ ТОЛЬКО В ПАМЯТИ - НЕ НУЖНО ОЧИЩАТЬ БАЗУ
+        logger.LogInformation("🧹 Startup cleanup: Skipping queue cleanup (queues are now in-memory only)");
+        
+        // Сохраняем все изменения
+        await context.SaveChangesAsync();
+        
+        logger.LogInformation("✅ Startup cleanup completed successfully");
     }
     catch (Exception ex)
     {
         using var scope = app.Services.CreateScope();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "❌ Error during startup queue cleanup");
+        logger.LogError(ex, "❌ Error during startup cleanup");
     }
 }
 

@@ -4,6 +4,8 @@ using Server.Data;
 using Server.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -131,24 +133,29 @@ public class AdminController : ControllerBase
     {
         try
         {
+            // Получаем in-memory статистику очередей
+            var inMemoryService = HttpContext.RequestServices.GetRequiredService<InMemoryMatchmakingService>();
+            
             var stats = new
             {
-                // Очереди по типам матчей
+                // Очереди по типам матчей (in-memory)
                 QueueStats = new
                 {
-                    OneVsOne = await _context.MatchQueues.CountAsync(q => q.MatchType == GameMatchType.OneVsOne),
-                    TwoVsTwo = await _context.MatchQueues.CountAsync(q => q.MatchType == GameMatchType.TwoVsTwo),
-                    FourPlayerFFA = await _context.MatchQueues.CountAsync(q => q.MatchType == GameMatchType.FourPlayerFFA),
-                    Total = await _context.MatchQueues.CountAsync()
+                    OneVsOne = inMemoryService.GetQueue(GameMatchType.OneVsOne).Count,
+                    TwoVsTwo = inMemoryService.GetQueue(GameMatchType.TwoVsTwo).Count,
+                    FourPlayerFFA = inMemoryService.GetQueue(GameMatchType.FourPlayerFFA).Count,
+                    Total = inMemoryService.GetQueue(GameMatchType.OneVsOne).Count + 
+                           inMemoryService.GetQueue(GameMatchType.TwoVsTwo).Count + 
+                           inMemoryService.GetQueue(GameMatchType.FourPlayerFFA).Count
                 },
                 
-                // Активные матчи по типам
+                // Активные матчи по типам (in-memory)
                 ActiveMatches = new
                 {
-                    OneVsOne = await _context.GameMatches.CountAsync(m => m.MatchType == GameMatchType.OneVsOne && m.Status == GameMatchStatus.InProgress),
-                    TwoVsTwo = await _context.GameMatches.CountAsync(m => m.MatchType == GameMatchType.TwoVsTwo && m.Status == GameMatchStatus.InProgress),
-                    FourPlayerFFA = await _context.GameMatches.CountAsync(m => m.MatchType == GameMatchType.FourPlayerFFA && m.Status == GameMatchStatus.InProgress),
-                    Total = await _context.GameMatches.CountAsync(m => m.Status == GameMatchStatus.InProgress)
+                    OneVsOne = inMemoryService.GetActiveMatches().Count(m => m.MatchType == GameMatchType.OneVsOne),
+                    TwoVsTwo = inMemoryService.GetActiveMatches().Count(m => m.MatchType == GameMatchType.TwoVsTwo),
+                    FourPlayerFFA = inMemoryService.GetActiveMatches().Count(m => m.MatchType == GameMatchType.FourPlayerFFA),
+                    Total = inMemoryService.GetActiveMatches().Count
                 },
                 
                 // Дополнительная информация

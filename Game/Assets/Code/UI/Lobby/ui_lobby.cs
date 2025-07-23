@@ -14,6 +14,14 @@ public class ui_lobby : MonoBehaviour
     [SerializeField] Button button_Cancel;
     [SerializeField] TextMeshProUGUI button_play_now_text;
     [SerializeField] TextMeshProUGUI status_text; // Optional status display
+    
+    // Кнопки выбора типа матча
+    [SerializeField] Button button_1v1;
+    [SerializeField] Button button_2v2;
+    [SerializeField] Button button_4ffa;
+    [SerializeField] TextMeshProUGUI text_selected_match_type;
+    
+    private int _selectedMatchType = 1; // По умолчанию 1v1
 
     private Coroutine _searchTimerCoroutine;
     private Coroutine _statusUpdateCoroutine;
@@ -76,7 +84,7 @@ public class ui_lobby : MonoBehaviour
         button_play_now_text.text = "Connecting...";
         
         if (status_text != null)
-            status_text.text = "Connecting to server...";
+            status_text.text = "🔄 Connecting to server...";
         
         if (text_nickname != null)
             text_nickname.text = "Connecting...";
@@ -92,7 +100,7 @@ public class ui_lobby : MonoBehaviour
         button_play_now_text.text = "Registering...";
         
         if (status_text != null)
-            status_text.text = "Creating player account...";
+            status_text.text = "📝 Creating player account...";
         
         if (text_nickname != null)
             text_nickname.text = "Registering...";
@@ -108,7 +116,7 @@ public class ui_lobby : MonoBehaviour
         button_play_now_text.text = "Logging in...";
         
         if (status_text != null)
-            status_text.text = "Authenticating...";
+            status_text.text = "🔐 Authenticating...";
         
         if (text_nickname != null)
             text_nickname.text = "Logging in...";
@@ -116,70 +124,124 @@ public class ui_lobby : MonoBehaviour
 
     public void InitLobby()
     {
-        Debug.Log("[ui_lobby] Initializing lobby UI...");
+        Debug.Log("[ui_lobby] Initializing lobby UI");
         
-        // Clear any existing listeners
-        button_PlayNow.onClick.RemoveAllListeners();
-        button_Cancel.onClick.RemoveAllListeners();
-        
-        // Add button listeners
-        button_PlayNow.onClick.AddListener(OnPlayNowClick);
-        button_Cancel.onClick.AddListener(OnCancelClick);
-        
-        // Update UI state
-        UpdateUIState();
-        
-        // Set nickname
-        string nickname = "Player";
-        if (Lobby.Instance != null && Lobby.Instance.currentUser != null && !string.IsNullOrEmpty(Lobby.Instance.currentUser.nick_name))
+        // Disable all buttons initially
+        if (button_PlayNow != null)
         {
-            nickname = Lobby.Instance.currentUser.nick_name;
+            button_PlayNow.interactable = false;
+            button_PlayNow.onClick.RemoveAllListeners();
+            button_PlayNow.onClick.AddListener(OnPlayNowClick);
         }
         
-        if (text_nickname != null)
-            text_nickname.text = nickname;
-        
-        // Set game version and server info
-        if (game_version != null)
+        if (button_Cancel != null)
         {
-            try
+            button_Cancel.interactable = false;
+            button_Cancel.onClick.RemoveAllListeners();
+            button_Cancel.onClick.AddListener(OnCancelClick);
+        }
+        
+        // Настройка кнопок выбора типа матча
+        if (button_1v1 != null)
+        {
+            button_1v1.onClick.RemoveAllListeners();
+            button_1v1.onClick.AddListener(() => SelectMatchType(1));
+        }
+        
+        if (button_2v2 != null)
+        {
+            button_2v2.onClick.RemoveAllListeners();
+            button_2v2.onClick.AddListener(() => SelectMatchType(2));
+        }
+        
+        if (button_4ffa != null)
+        {
+            button_4ffa.onClick.RemoveAllListeners();
+            button_4ffa.onClick.AddListener(() => SelectMatchType(4));
+        }
+        
+        // Устанавливаем начальный тип матча
+        SelectMatchType(1); // По умолчанию 1v1
+        
+        // Check if we have a valid user and are connected to server
+        if (Lobby.Instance != null && Lobby.Instance.currentUser != null && !string.IsNullOrEmpty(Lobby.Instance.currentUser.user_id))
+        {
+            Debug.Log($"[ui_lobby] User found: {Lobby.Instance.currentUser.nick_name}");
+            
+            // Update username display
+            if (text_nickname != null)
             {
-                Debug.Log("[BuildInfo] Attempting to load build_info TextAsset...");
-                TextAsset buildInfoAsset = Resources.Load<TextAsset>("build_info");
-                string versionText = "N/A";
-                
-                if (buildInfoAsset != null)
-                {
-                    Debug.Log($"[BuildInfo] Raw build_info text: {buildInfoAsset.text}");
-                    string[] parts = buildInfoAsset.text.Split('|');
-                    Debug.Log($"[BuildInfo] Parsed parts count: {parts.Length}");
-                    if (parts.Length == 2)
-                    {
-                        Debug.Log($"[BuildInfo] Setting version text: {parts[0]} ({parts[1]})");
-                        versionText = $"{parts[0]} ({parts[1]})";
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[BuildInfo] Unexpected format in build_info, using raw text");
-                        versionText = buildInfoAsset.text;
-                    }
-                }
-                else
-                {
-                    Debug.LogError("[BuildInfo] build_info TextAsset not found in Resources");
-                    versionText = "N/A";
-                }
-                
-                // Add server info
-                string serverInfo = GetServerDisplayName();
-                game_version.text = $"{versionText}\n{serverInfo}";
+                text_nickname.text = Lobby.Instance.currentUser.nick_name;
             }
-            catch (Exception ex)
+            
+            // Update version display
+            if (game_version != null)
             {
-                Debug.LogError($"[BuildInfo] Exception while loading build info: {ex}");
-                game_version.text = "Error";
+                game_version.text = "v1.0 - " + GetServerDisplayName();
+            }
+            
+            // Now enable buttons and start status monitoring
+            if (button_PlayNow != null)
+            {
+                button_PlayNow.interactable = true;
+            }
+            
+            // Start periodic status monitoring
+            _statusUpdateCoroutine = StartCoroutine(UpdateUIStatusPeriodically());
+        }
+        else
+        {
+            Debug.LogWarning("[ui_lobby] No valid user found or not connected to server");
+            
+            // Update displays to show disconnected state
+            if (text_nickname != null)
+            {
+                text_nickname.text = "Not Connected";
+            }
+            
+            if (game_version != null)
+            {
+                game_version.text = "v1.0 - Disconnected";
             }
         }
+    }
+    
+    // Метод для выбора типа матча
+    private void SelectMatchType(int matchType)
+    {
+        _selectedMatchType = matchType;
+        
+        // Обновляем визуальное отображение выбранного типа
+        UpdateMatchTypeButtons();
+        
+        // Обновляем текст выбранного типа
+        if (text_selected_match_type != null)
+        {
+            string typeName = GetMatchTypeName(matchType);
+            text_selected_match_type.text = $"Выбран: {typeName}";
+        }
+        
+        Debug.Log($"[ui_lobby] Selected match type: {matchType} ({GetMatchTypeName(matchType)})");
+    }
+    
+    // Обновление визуального состояния кнопок типа матча
+    private void UpdateMatchTypeButtons()
+    {
+        // Здесь можно добавить визуальные изменения кнопок (цвет, размер и т.д.)
+        // Пока просто логируем
+        Debug.Log($"[ui_lobby] Updated match type buttons, selected: {_selectedMatchType}");
+    }
+    
+    // Вспомогательный метод для получения названия типа матча
+    private string GetMatchTypeName(int matchType)
+    {
+        return matchType switch
+        {
+            1 => "1v1",
+            2 => "2v2",
+            4 => "1v1x1x1 (FFA)",
+            _ => "Unknown"
+        };
     }
 
     private void UpdateUIState()
@@ -187,11 +249,16 @@ public class ui_lobby : MonoBehaviour
         if (Lobby.Instance == null)
         {
             Debug.LogWarning("[ui_lobby] Lobby instance not found, cannot update UI state");
+            if (status_text != null)
+                status_text.text = "❌ No connection to lobby system";
             return;
         }
 
         var playerStatus = Lobby.Instance.GetPlayerStatus();
         Debug.Log($"[ui_lobby] Updating UI state for player status: {playerStatus}");
+
+        // Always update status text with current player status
+        UpdatePlayerStatusText(playerStatus);
 
         switch (playerStatus)
         {
@@ -202,8 +269,6 @@ public class ui_lobby : MonoBehaviour
                 button_PlayNow.gameObject.SetActive(false);
                 button_Cancel.gameObject.SetActive(false);
                 button_play_now_text.text = "Loading...";
-                if (status_text != null)
-                    status_text.text = "Initializing...";
                 break;
 
             case Lobby.PlayerStatus.Idle:
@@ -212,8 +277,6 @@ public class ui_lobby : MonoBehaviour
                 button_Cancel.gameObject.SetActive(false);
                 button_PlayNow.interactable = true;
                 button_play_now_text.text = "Play Now";
-                if (status_text != null)
-                    status_text.text = "Ready to play";
                 break;
 
             case Lobby.PlayerStatus.Searching:
@@ -221,8 +284,6 @@ public class ui_lobby : MonoBehaviour
                 button_PlayNow.gameObject.SetActive(false);
                 button_Cancel.gameObject.SetActive(true);
                 button_Cancel.interactable = true;
-                if (status_text != null)
-                    status_text.text = "Searching for match...";
                 break;
 
             case Lobby.PlayerStatus.InGame:
@@ -230,8 +291,6 @@ public class ui_lobby : MonoBehaviour
                 button_PlayNow.gameObject.SetActive(false);
                 button_Cancel.gameObject.SetActive(false);
                 button_play_now_text.text = "In Game";
-                if (status_text != null)
-                    status_text.text = "Match in progress";
                 break;
 
             case Lobby.PlayerStatus.Error:
@@ -240,8 +299,50 @@ public class ui_lobby : MonoBehaviour
                 button_Cancel.gameObject.SetActive(false);
                 button_PlayNow.interactable = false;
                 button_play_now_text.text = "Error";
-                if (status_text != null)
-                    status_text.text = "Connection error";
+                break;
+        }
+    }
+
+    private string GetPlayerName()
+    {
+        if (Lobby.Instance != null && Lobby.Instance.currentUser != null && !string.IsNullOrEmpty(Lobby.Instance.currentUser.nick_name))
+        {
+            return Lobby.Instance.currentUser.nick_name;
+        }
+        return "Player";
+    }
+
+    private void UpdatePlayerStatusText(Lobby.PlayerStatus playerStatus)
+    {
+        if (status_text == null) return;
+        
+        switch (playerStatus)
+        {
+            case Lobby.PlayerStatus.Unregistered:
+                status_text.text = "Не зарегистрирован";
+                break;
+            case Lobby.PlayerStatus.Registering:
+                status_text.text = "Регистрация...";
+                break;
+            case Lobby.PlayerStatus.Authenticating:
+                status_text.text = "Авторизация...";
+                break;
+            case Lobby.PlayerStatus.Idle:
+                status_text.text = "Готов к игре";
+                break;
+            case Lobby.PlayerStatus.Searching:
+                // Показываем выбранный тип матча при поиске
+                string matchTypeName = GetMatchTypeName(_selectedMatchType);
+                status_text.text = $"Поиск {matchTypeName}...";
+                break;
+            case Lobby.PlayerStatus.InGame:
+                status_text.text = "В игре";
+                break;
+            case Lobby.PlayerStatus.Error:
+                status_text.text = "Ошибка подключения";
+                break;
+            default:
+                status_text.text = "Неизвестный статус";
                 break;
         }
     }
@@ -258,7 +359,7 @@ public class ui_lobby : MonoBehaviour
     // Handle Play Now click: start search
     private void OnPlayNowClick()
     {
-        Debug.Log("[ui_lobby] Play Now button clicked");
+        Debug.Log($"[ui_lobby] Play Now button clicked for match type: {_selectedMatchType} ({GetMatchTypeName(_selectedMatchType)})");
         
         if (Lobby.Instance == null)
         {
@@ -273,7 +374,8 @@ public class ui_lobby : MonoBehaviour
             return;
         }
 
-        Lobby.Instance.AddPlayerToQueue();
+        // Передаем выбранный тип матча в Lobby
+        Lobby.Instance.AddPlayerToQueue(_selectedMatchType);
     }
 
     // Handle Cancel click: stop search
@@ -301,7 +403,14 @@ public class ui_lobby : MonoBehaviour
     {
         Debug.Log("[ui_lobby] Search started - updating UI");
         
-        // Update UI state
+        // Показываем выбранный тип матча в кнопке
+        if (button_play_now_text != null)
+        {
+            string matchTypeName = GetMatchTypeName(_selectedMatchType);
+            button_play_now_text.text = $"Поиск {matchTypeName}...";
+        }
+        
+        // Update UI state and status text
         UpdateUIState();
         
         // Start search timer
@@ -319,8 +428,14 @@ public class ui_lobby : MonoBehaviour
             _searchTimerCoroutine = null;
         }
         
-        // Update UI state
+        // Update UI state and status text
         UpdateUIState();
+        
+        // Force immediate status update for idle
+        if (status_text != null)
+        {
+            status_text.text = $"✅ {GetPlayerName()} - Ready to play";
+        }
     }
 
     public void OnMatchFound(string gameId)
@@ -332,6 +447,12 @@ public class ui_lobby : MonoBehaviour
         {
             StopCoroutine(_searchTimerCoroutine);
             _searchTimerCoroutine = null;
+        }
+        
+        // Force immediate status update for match found
+        if (status_text != null)
+        {
+            status_text.text = $"🎮 {GetPlayerName()} - Match found! Loading...";
         }
         
         // Update UI state
@@ -361,11 +482,21 @@ public class ui_lobby : MonoBehaviour
     private IEnumerator SearchTimerCoroutine()
     {
         float startTime = Time.time;
+        
         while (true)
         {
             float elapsed = Time.time - startTime;
             TimeSpan ts = TimeSpan.FromSeconds(elapsed);
+            
+            // Update button text with timer
             button_play_now_text.text = string.Format("{0:00}:{1:00}", (int)ts.TotalMinutes, ts.Seconds);
+            
+            // Update status text with search time
+            if (status_text != null)
+            {
+                status_text.text = $"🔍 {GetPlayerName()} - Searching... {(int)ts.TotalMinutes:00}:{ts.Seconds:00}";
+            }
+            
             yield return new WaitForSeconds(1f);
         }
     }

@@ -223,10 +223,18 @@ class BotManager:
         """Цикл действий бота"""
         last_heartbeat = 0
         last_queue_attempt = 0
+        cycle_count = 0
+        
+        print(f"🤖 Бот {bot.bot_id} запущен в бесконечном цикле")
         
         while self.running and bot.is_active:
             try:
+                cycle_count += 1
                 current_time = time.time()
+                
+                # Логируем каждые 100 циклов
+                if cycle_count % 100 == 0:
+                    print(f"🔄 Бот {bot.bot_id}: выполнено {cycle_count} циклов, состояние: {bot.current_state}")
                 
                 # Отправляем heartbeat каждые 60 секунд
                 if current_time - last_heartbeat >= 60:
@@ -257,11 +265,13 @@ class BotManager:
                 bot.last_action_time = datetime.now()
                 
             except Exception as e:
-                print(f"Error in bot {bot.bot_id} cycle: {e}")
+                print(f"❌ Error in bot {bot.bot_id} cycle: {e}")
                 self.stats['api_errors'] += 1
                 
             # Пауза между действиями
             time.sleep(5)
+            
+        print(f"⚠️ Бот {bot.bot_id} завершил работу! Выполнено {cycle_count} циклов. running={self.running}, is_active={bot.is_active}")
             
     def check_bot_state(self, bot: Bot):
         """Проверяет текущее состояние бота через сервер"""
@@ -461,23 +471,32 @@ class BotManager:
         print("\n" + "="*50)
         print("BOT MANAGER STATISTICS")
         print("="*50)
-        print(f"Total bots: {self.stats['total_bots']}")
-        print(f"Active bots: {self.stats['active_bots']}")
-        print(f"Bots in queue: {self.stats['bots_in_queue']}")
-        print(f"Bots in match: {self.stats['bots_in_match']}")
-        print(f"Matches played: {self.stats['matches_played']}")
-        print(f"Queue attempts: {self.stats['queue_attempts']}")
-        print(f"API errors: {self.stats['api_errors']}")
+        print(f"🤖 Total bots: {self.stats['total_bots']}")
+        print(f"✅ Active bots: {self.stats['active_bots']}")
+        print(f"⏳ Bots in queue: {self.stats['bots_in_queue']}")
+        print(f"🎮 Bots in match: {self.stats['bots_in_match']}")
+        print(f"🏆 Matches played: {self.stats['matches_played']}")
+        print(f"🎯 Queue attempts: {self.stats['queue_attempts']}")
+        print(f"❌ API errors: {self.stats['api_errors']}")
+        print(f"🔄 System running: {self.running}")
         print("="*50)
+        
+        # Проверяем, все ли боты активны
+        inactive_bots = [bot for bot in self.bots.values() if not bot.is_active]
+        if inactive_bots:
+            print(f"⚠️ ВНИМАНИЕ: {len(inactive_bots)} неактивных ботов!")
+            for bot in inactive_bots[:5]:
+                print(f"  - {bot.bot_id}: деактивирован")
         
         # Детализированная информация о ботах
         print("\nBOT STATES:")
         for bot_id, bot in list(self.bots.items())[:10]:  # Показываем первых 10 ботов
-            print(f"{bot_id}: {bot.current_state}")
+            status = "✅" if bot.is_active else "❌"
+            print(f"  {status} {bot_id}: {bot.current_state}")
             
     def start(self):
         """Запускает систему ботов"""
-        print("Starting Bot Manager...")
+        print("🚀 Starting Bot Manager...")
         
         # Загружаем существующих ботов
         self.load_bots_from_db()
@@ -486,25 +505,41 @@ class BotManager:
         if len(self.bots) < bots_count:
             self.create_bots()
             
+        # Убеждаемся что все боты активны
+        for bot in self.bots.values():
+            bot.is_active = True
+            print(f"✅ Бот {bot.bot_id} принудительно активирован")
+            
         self.running = True
+        print(f"🔄 Система установлена на БЕСКОНЕЧНУЮ работу (running={self.running})")
         
         # Запускаем потоки для каждого бота
         for bot in self.bots.values():
             thread = threading.Thread(target=self.bot_action_cycle, args=(bot,), daemon=True)
             thread.start()
             self.threads.append(thread)
+            print(f"🧵 Запущен поток для бота {bot.bot_id}")
             
         # Запускаем поток статистики
         stats_thread = threading.Thread(target=self.stats_loop, daemon=True)
         stats_thread.start()
         
-        print(f"Bot Manager started with {len(self.bots)} bots")
+        print(f"✅ Bot Manager успешно запущен с {len(self.bots)} ботами")
+        print(f"🧵 Активных потоков: {len(self.threads)} + 1 (статистика)")
+        print("🔄 Все боты работают в БЕСКОНЕЧНОМ режиме!")
         
     def stats_loop(self):
         """Цикл вывода статистики"""
+        stats_iteration = 0
+        print("📊 Запуск цикла статистики...")
+        
         while self.running:
             time.sleep(30)  # Каждые 30 секунд
+            stats_iteration += 1
+            print(f"📊 Вывод статистики #{stats_iteration}:")
             self.print_stats()
+            
+        print("📊 Цикл статистики завершен")
             
     def stop(self):
         """Останавливает систему ботов"""
@@ -531,19 +566,32 @@ bot_manager = BotManager()
 def main():
     """Основная функция для запуска системы ботов"""
     try:
+        print("🚀 Запуск системы ботов...")
         bot_manager.start()
         
-        print("\nBot Manager is running!")
-        print("Press Ctrl+C to stop...")
+        print("\n✅ Bot Manager запущен и работает БЕСКОНЕЧНО!")
+        print("🔄 Боты будут работать до получения Ctrl+C")
+        print("📊 Статистика выводится каждые 30 секунд")
+        print("🔍 Для остановки нажмите Ctrl+C...")
         
-        # Ждем сигнала остановки
+        # Ждем сигнала остановки - БЕСКОНЕЧНЫЙ ЦИКЛ
+        iteration = 0
         while True:
-            time.sleep(1)
+            iteration += 1
+            time.sleep(10)
+            
+            # Каждые 30 секунд показываем что мы живы
+            if iteration % 3 == 0:
+                print(f"💓 Система ботов работает... (итерация {iteration})")
             
     except KeyboardInterrupt:
-        print("\nReceived stop signal...")
+        print("\n🛑 Получен сигнал остановки (Ctrl+C)...")
         bot_manager.stop()
-        print("Bot Manager stopped successfully!")
+        print("✅ Bot Manager остановлен успешно!")
+    except Exception as e:
+        print(f"❌ Неожиданная ошибка в main(): {e}")
+        bot_manager.stop()
+        print("⚠️ Bot Manager остановлен из-за ошибки!")
 
 if __name__ == "__main__":
     main()

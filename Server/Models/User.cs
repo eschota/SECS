@@ -49,8 +49,4 @@ public class User
     public int MmrOneVsOne { get; set; } = 500;      // 1x1
     public int MmrTwoVsTwo { get; set; } = 500;      // 2x2  
     public int MmrFourPlayerFFA { get; set; } = 500; // 1x1x1x1
-
-    // Текущий статус игрока
-    public int? CurrentMatchId { get; set; }       // ID текущего матча (null если не в матче)
-    public bool IsInQueue { get; set; } = false;   // В очереди поиска игры
 } 

@@ -1,85 +1,82 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Server.Data;
 using Server.Models;
+using Server.Services;
 
 namespace Server.Controllers;
 
+/// <summary>
+/// Контроллер управления in-memory очередями матчмейкинга.
+/// Все операции с очередями происходят только в памяти сервера.
+/// </summary>
 [ApiController]
 [Route("api-game-queue")]
 public class QueueController : ControllerBase
 {
     private readonly GameDbContext _context;
+    private readonly InMemoryMatchmakingService _memory;
 
-    public QueueController(GameDbContext context)
+    public QueueController(GameDbContext context, InMemoryMatchmakingService memory)
     {
         _context = context;
+        _memory = memory;
     }
 
+    /// <summary>
+    /// Войти в очередь поиска (in-memory).
+    /// </summary>
     [HttpPost("{userId}/join")]
     public async Task<ActionResult> JoinQueue(int userId, [FromBody] JoinQueueRequest request)
     {
+        var logger = HttpContext.RequestServices.GetRequiredService<ILogger<QueueController>>();
+        logger.LogInformation($"🎮 Player {userId} attempting to join queue for match type {request.MatchType}");
+        
         var user = await _context.Users.FindAsync(userId);
         if (user == null)
             return NotFound("User not found");
 
-        if (user.IsInQueue)
-            return BadRequest("User is already in queue");
-
-        if (user.CurrentMatchId != null)
-            return BadRequest("User is already in a match");
-
-        // Проверяем, существует ли уже запись в очереди
-        var existingQueue = await _context.MatchQueues
-            .FirstOrDefaultAsync(q => q.UserId == userId);
+        // In-memory очередь
+        _memory.RemoveFromQueue(userId, request.MatchType); // На всякий случай удаляем старую
         
-        if (existingQueue != null)
+        var queueEntry = new MatchQueue
         {
-            // Обновляем существующую запись
-            existingQueue.MatchType = request.MatchType;
-            existingQueue.MmrRating = GetUserMmrForType(user, request.MatchType);
-            existingQueue.JoinTime = DateTime.UtcNow;
-        }
-        else
-        {
-            // Создаем новую запись
-            var queueEntry = new MatchQueue
-            {
-                UserId = userId,
-                MatchType = request.MatchType,
-                MmrRating = GetUserMmrForType(user, request.MatchType),
-                JoinTime = DateTime.UtcNow
-            };
-
-            _context.MatchQueues.Add(queueEntry);
-        }
-
-        user.IsInQueue = true;
-        await _context.SaveChangesAsync();
-
+            UserId = userId,
+            MatchType = request.MatchType,
+            MmrRating = GetUserMmrForType(user, request.MatchType),
+            JoinTime = DateTime.UtcNow
+        };
+        
+        _memory.AddToQueue(queueEntry);
+        
+        logger.LogInformation($"✅ Player {userId} ({user.Username}) joined in-memory queue for {request.MatchType}");
         return Ok(new { message = "Successfully joined queue", queueType = request.MatchType });
     }
 
+    /// <summary>
+    /// Выйти из всех очередей поиска (in-memory).
+    /// </summary>
     [HttpPost("{userId}/leave")]
     public async Task<ActionResult> LeaveQueue(int userId)
     {
+        var logger = HttpContext.RequestServices.GetRequiredService<ILogger<QueueController>>();
+        
         var user = await _context.Users.FindAsync(userId);
         if (user == null)
             return NotFound("User not found");
 
-        var queueEntry = await _context.MatchQueues
-            .FirstOrDefaultAsync(q => q.UserId == userId);
-
-        if (queueEntry == null)
-            return BadRequest("User is not in queue");
-
-        _context.MatchQueues.Remove(queueEntry);
-        user.IsInQueue = false;
-        await _context.SaveChangesAsync();
-
+        // Удаляем из всех очередей (на всякий случай)
+        foreach (GameMatchType type in Enum.GetValues(typeof(GameMatchType)))
+            _memory.RemoveFromQueue(userId, type);
+        
+        logger.LogInformation($"✅ Player {userId} ({user.Username}) left all in-memory queues");
         return Ok(new { message = "Successfully left queue" });
     }
 
+    /// <summary>
+    /// Получить статус игрока в очереди (in-memory).
+    /// </summary>
     [HttpGet("{userId}/status")]
     public async Task<ActionResult> GetQueueStatus(int userId)
     {
@@ -87,37 +84,38 @@ public class QueueController : ControllerBase
         if (user == null)
             return NotFound("User not found");
 
-        var queueEntry = await _context.MatchQueues
-            .FirstOrDefaultAsync(q => q.UserId == userId);
-
-        if (queueEntry == null)
-            return Ok(new { inQueue = false });
-
-        var queueTime = DateTime.UtcNow - queueEntry.JoinTime;
-        var currentThreshold = queueEntry.CalculateCurrentMmrThreshold();
-
-        return Ok(new
+        // Ищем игрока во всех очередях
+        foreach (GameMatchType type in Enum.GetValues(typeof(GameMatchType)))
         {
-            inQueue = true,
-            queueType = queueEntry.MatchType,
-            queueTime = (int)queueTime.TotalSeconds,
-            currentMmrThreshold = currentThreshold,
-            userMmr = queueEntry.MmrRating
-        });
+            var queue = _memory.GetQueue(type).FirstOrDefault(q => q.UserId == userId);
+            if (queue != null)
+            {
+                var queueTime = DateTime.UtcNow - queue.JoinTime;
+                var currentThreshold = queue.CalculateCurrentMmrThreshold();
+                return Ok(new
+                {
+                    inQueue = true,
+                    queueType = queue.MatchType,
+                    queueTime = (int)queueTime.TotalSeconds,
+                    currentMmrThreshold = currentThreshold,
+                    userMmr = queue.MmrRating
+                });
+            }
+        }
+        
+        return Ok(new { inQueue = false });
     }
 
+    /// <summary>
+    /// Получить статистику по всем in-memory очередям.
+    /// </summary>
     [HttpGet("stats")]
-    public async Task<ActionResult> GetQueueStats()
+    public ActionResult GetQueueStats()
     {
-        var oneVsOneCount = await _context.MatchQueues
-            .CountAsync(q => q.MatchType == GameMatchType.OneVsOne);
-
-        var twoVsTwoCount = await _context.MatchQueues
-            .CountAsync(q => q.MatchType == GameMatchType.TwoVsTwo);
-
-        var ffaCount = await _context.MatchQueues
-            .CountAsync(q => q.MatchType == GameMatchType.FourPlayerFFA);
-
+        var oneVsOneCount = _memory.GetQueue(GameMatchType.OneVsOne).Count;
+        var twoVsTwoCount = _memory.GetQueue(GameMatchType.TwoVsTwo).Count;
+        var ffaCount = _memory.GetQueue(GameMatchType.FourPlayerFFA).Count;
+        
         return Ok(new
         {
             oneVsOne = oneVsOneCount,

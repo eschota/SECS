@@ -1,5 +1,6 @@
 using Unity.VisualScripting;
 using UnityEngine;
+using System.Collections.Generic;
 
 
 public class ui_canvas_group : MonoBehaviour
@@ -7,7 +8,7 @@ public class ui_canvas_group : MonoBehaviour
 
     [SerializeField] CanvasGroup canvasGroup;
 
-    public main.State thisState;
+    public List<main.State> thisState;
     [SerializeField] float fadeDuration = 0.5f;
     bool isFade = true;
 
@@ -19,7 +20,7 @@ public class ui_canvas_group : MonoBehaviour
 
     private void OnChangeState(main.State state)
     {
-        isFade = (state == thisState);
+        isFade = thisState.Contains(state);
     }
     private void OnDestroy()
     {

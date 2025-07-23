@@ -415,24 +415,26 @@ def get_player_queue_status(player_id):
         for match_type, tickets in queues.items():
             for ticket in tickets:
                 if ticket.queue_player == player_id:
+                    wait_time = (datetime.now() - ticket.queue_ticket_register_time).total_seconds()
+                    
                     return jsonify({
-                        "status": "success",
-                        "in_queue": True,
-                        "ticket": {
-                            "queue_ticket_id": ticket.queue_ticket_id,
-                            "match_type": MATCH_TYPES[match_type]['name'],
-                            "mmr": ticket.queue_ticket_player_mmr,
-                            "wait_time": (datetime.now() - ticket.queue_ticket_register_time).total_seconds(),
-                            "mmr_threshold": calculate_mmr_threshold(ticket),
-                            "position": tickets.index(ticket) + 1,
-                            "total_in_queue": len(tickets)
-                        }
+                        "inQueue": True,
+                        "queueType": match_type,
+                        "queueTime": int(wait_time),
+                        "currentMmrThreshold": calculate_mmr_threshold(ticket),
+                        "userMmr": ticket.queue_ticket_player_mmr,
+                        "matchId": "",  # Empty unless match found
+                        "matchFound": False  # Will be True when match is found
                     })
     
     return jsonify({
-        "status": "success",
-        "in_queue": False,
-        "message": "Player not in queue"
+        "inQueue": False,
+        "queueType": 0,
+        "queueTime": 0,
+        "currentMmrThreshold": 0,
+        "userMmr": 0,
+        "matchId": "",
+        "matchFound": False
     })
 
 @queue_bp.route('/clear', methods=['POST'])

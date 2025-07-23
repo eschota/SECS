@@ -1,19 +1,19 @@
 {
   "Files": [
     {
-      "Id": "c:\\SECS\\Server\\wwwroot\\online-game\\admin.html",
+      "Id": "C:\\SECS\\Server\\wwwroot\\online-game\\admin.html",
       "PackagePath": "staticwebassets\\online-game\\admin.html"
     },
     {
-      "Id": "c:\\SECS\\Server\\wwwroot\\online-game\\game.css",
+      "Id": "C:\\SECS\\Server\\wwwroot\\online-game\\game.css",
       "PackagePath": "staticwebassets\\online-game\\game.css"
     },
     {
-      "Id": "c:\\SECS\\Server\\wwwroot\\online-game\\game.html",
+      "Id": "C:\\SECS\\Server\\wwwroot\\online-game\\game.html",
       "PackagePath": "staticwebassets\\online-game\\game.html"
     },
     {
-      "Id": "c:\\SECS\\Server\\wwwroot\\online-game\\game.js",
+      "Id": "C:\\SECS\\Server\\wwwroot\\online-game\\game.js",
       "PackagePath": "staticwebassets\\online-game\\game.js"
     },
     {

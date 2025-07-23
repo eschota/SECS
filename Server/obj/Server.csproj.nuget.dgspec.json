@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\SECS\\Server\\Server.csproj": {}
+    "C:\\SECS\\Server\\Server.csproj": {}
   },
   "projects": {
-    "c:\\SECS\\Server\\Server.csproj": {
+    "C:\\SECS\\Server\\Server.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\SECS\\Server\\Server.csproj",
+        "projectUniqueName": "C:\\SECS\\Server\\Server.csproj",
         "projectName": "Server",
-        "projectPath": "c:\\SECS\\Server\\Server.csproj",
+        "projectPath": "C:\\SECS\\Server\\Server.csproj",
         "packagesPath": "C:\\Users\\escho\\.nuget\\packages\\",
-        "outputPath": "c:\\SECS\\Server\\obj\\",
+        "outputPath": "C:\\SECS\\Server\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\escho\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -69,6 +69,14 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "NLog": {
+              "target": "Package",
+              "version": "[5.2.8, )"
+            },
+            "NLog.Web.AspNetCore": {
+              "target": "Package",
+              "version": "[5.3.8, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

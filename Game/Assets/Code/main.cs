@@ -10,12 +10,12 @@ public class main : MonoBehaviour
     
     // API URLs согласно новой документации
     public static string BaseUrl = "https://renderfin.com";
-    public static string PlayerUrl = "https://renderfin.com/api-game-player/";
-    public static string QueueUrl = "https://renderfin.com/api-game-queue/";
-    public static string MatchUrl = "https://renderfin.com/api-game-match/";
-    public static string LobbyUrl = "https://renderfin.com/api-game-lobby/";
-    public static string StatsUrl = "https://renderfin.com/api-game-statistics/";
-    public static string AdminUrl = "https://renderfin.com/api-game-admin/";
+    public static string PlayerUrl = "https://renderfin.com/api-game-player";
+    public static string QueueUrl = "https://renderfin.com/api-game-queue";
+    public static string MatchUrl = "https://renderfin.com/api-game-match";
+    public static string LobbyUrl = "https://renderfin.com/api-game-lobby";
+    public static string StatsUrl = "https://renderfin.com/api-game-statistics";
+    public static string AdminUrl = "https://renderfin.com/api-game-admin";
     
     // Development/Production server fallback
     public static string[] PossibleServers = {
@@ -27,6 +27,54 @@ public class main : MonoBehaviour
     public static Lobby lobby;
 
     public static event Action<State> ChangeState;
+    
+    // Добавляем метод для синхронизации состояний на основе данных от сервера
+    public static void SyncStateFromServer(Lobby.PlayerStatus playerStatus, bool hasActiveMatch = false)
+    {
+        if (Instance == null) return;
+        
+        State newState = Instance.currentState;
+        
+        switch (playerStatus)
+        {
+            case Lobby.PlayerStatus.Unregistered:
+                newState = State.PlayerRegistration;
+                break;
+            case Lobby.PlayerStatus.Registering:
+                newState = State.PlayerRegistration;
+                break;
+            case Lobby.PlayerStatus.Authenticating:
+                newState = State.PlayerLogin;
+                break;
+            case Lobby.PlayerStatus.Idle:
+                newState = State.Lobby;
+                break;
+            case Lobby.PlayerStatus.Searching:
+                newState = State.Search;
+                break;
+            case Lobby.PlayerStatus.InGame:
+                if (hasActiveMatch)
+                {
+                    newState = State.Match;
+                }
+                else
+                {
+                    newState = State.MatchFound;
+                }
+                break;
+            case Lobby.PlayerStatus.Error:
+                // Не меняем состояние при ошибке, оставляем текущее
+                break;
+        }
+        
+        // Обновляем состояние только если оно действительно изменилось
+        if (newState != Instance.currentState)
+        {
+            Debug.Log($"[main] State synced from server: {Instance.currentState} -> {newState} (PlayerStatus: {playerStatus})");
+            Instance.SetState(newState);
+        }
+    }
+
     public enum State
     {
         Server_connect,
@@ -137,6 +185,15 @@ public class main : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        
+        // Инициализируем логирование Unity
+        if (FindObjectOfType<UnityLogger>() == null)
+        {
+            GameObject loggerGO = new GameObject("UnityLogger");
+            loggerGO.AddComponent<UnityLogger>();
+            DontDestroyOnLoad(loggerGO);
+        }
+        
         // Загружаем сцену UI в режиме Additive и после загрузки инициализируем UI
         StartCoroutine(LoadUIAndInitLobby());
     }

@@ -50,31 +50,33 @@ public class PlayerController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<UserDto>> GetPlayer(int id)
     {
-        var user = await _context.Users
-            .Where(u => u.Id == id && u.IsActive)
-            .Select(u => new UserDto
-            {
-                Id = u.Id,
-                Username = u.Username,
-                Email = u.Email,
-                Avatar = u.Avatar,
-                CreatedAt = u.CreatedAt,
-                GamesPlayed = u.GamesPlayed,
-                GamesWon = u.GamesWon,
-                Score = u.Score,
-                Level = u.Level,
-                MmrOneVsOne = u.MmrOneVsOne,
-                MmrTwoVsTwo = u.MmrTwoVsTwo,
-                MmrFourPlayerFFA = u.MmrFourPlayerFFA
-            })
-            .FirstOrDefaultAsync();
-
-        if (user == null)
+        var user = await _context.Users.FindAsync(id);
+        if (user == null || !user.IsActive)
         {
             return NotFound($"Пользователь с ID {id} не найден");
         }
 
-        return Ok(user);
+        // 💓 Автоматическое обновление heartbeat при запросе статуса игрока
+        user.LastHeartbeat = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var userDto = new UserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            Avatar = user.Avatar,
+            CreatedAt = user.CreatedAt,
+            GamesPlayed = user.GamesPlayed,
+            GamesWon = user.GamesWon,
+            Score = user.Score,
+            Level = user.Level,
+            MmrOneVsOne = user.MmrOneVsOne,
+            MmrTwoVsTwo = user.MmrTwoVsTwo,
+            MmrFourPlayerFFA = user.MmrFourPlayerFFA
+        };
+
+        return Ok(userDto);
     }
 
     // POST: api-game-player
@@ -117,6 +119,7 @@ public class PlayerController : ControllerBase
             Avatar = createUserDto.Avatar ?? "https://www.gravatar.com/avatar/?d=mp",
             CreatedAt = DateTime.UtcNow,
             LastLoginAt = DateTime.UtcNow,
+            LastHeartbeat = DateTime.UtcNow, // Устанавливаем начальный heartbeat
             
             // Явно устанавливаем MMR 500 для всех типов матчей
             MmrOneVsOne = 500,
@@ -173,6 +176,7 @@ public class PlayerController : ControllerBase
 
         // Обновление времени последнего входа
         user.LastLoginAt = DateTime.UtcNow;
+        user.LastHeartbeat = DateTime.UtcNow; // Устанавливаем heartbeat при логине
         await _context.SaveChangesAsync();
 
         var userDto = new UserDto
@@ -192,30 +196,6 @@ public class PlayerController : ControllerBase
         };
 
         return Ok(userDto);
-    }
-
-    // POST: api-game-player/heartbeat
-    [HttpPost("heartbeat")]
-    public async Task<IActionResult> Heartbeat(HeartbeatDto heartbeatDto)
-    {
-        try
-        {
-            var user = await _context.Users.FindAsync(heartbeatDto.UserId);
-            if (user == null || !user.IsActive)
-            {
-                return NotFound($"Пользователь с ID {heartbeatDto.UserId} не найден");
-            }
-
-            // Обновляем время последнего heartbeat
-            user.LastHeartbeat = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { success = true, timestamp = user.LastHeartbeat });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Ошибка обработки heartbeat: {ex.Message}");
-        }
     }
 
     // PUT: api-game-player/5
@@ -351,12 +331,4 @@ public class UpdateUserDto
     
     [MinLength(6)]
     public string? Password { get; set; }
-}
-
-public class HeartbeatDto
-{
-    [Required]
-    public int UserId { get; set; }
-    
-    public string? Timestamp { get; set; }
 } 

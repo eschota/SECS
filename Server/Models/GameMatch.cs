@@ -18,6 +18,9 @@ public enum GameMatchStatus
     Cancelled
 }
 
+/// <summary>
+/// Модель матча. Только завершённые матчи сохраняются в базу данных, активные — только in-memory.
+/// </summary>
 public class GameMatch
 {
     [Key]
@@ -45,7 +48,7 @@ public class GameMatch
     public string? MatchDraw { get; set; } // JSON массив int[]
 
     [Required]
-    public float MatchMaxTimeLimit { get; set; } = 60.0f; // 1 минута в секундах
+    public float MatchMaxTimeLimit { get; set; } = 600.0f; // 10 минут в секундах
 
     [Required]
     public GameMatchStatus Status { get; set; } = GameMatchStatus.InProgress;
