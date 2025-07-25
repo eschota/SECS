@@ -1,7 +1,24 @@
 using UnityEngine;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 public class SHIP_CAMERA : MonoBehaviour
 {
+    // Статический Instance для доступа из других скриптов
+    public static SHIP_CAMERA Instance { get; private set; }
+    
+    // Enum для типов камеры
+    public enum camType
+    {
+        strategy,    // Стратегический вид (по умолчанию)
+        firstPerson, // От первого лица
+        free,        // Свободная камера
+        freeze       // Замороженная камера
+    }
+    
+    [Header("Настройки состояний камеры")]
+    [SerializeField] private ObservableCollection<camType> stackTypes;
+    
     [Header("Настройки движения")]
     [SerializeField] private float moveSpeed = 20f;
     [SerializeField] private float edgeScrollThreshold = 10f;
@@ -41,6 +58,37 @@ public class SHIP_CAMERA : MonoBehaviour
     private Vector3 lastMousePosition;
     private Camera cameraComponent;
     
+    // Переменные для режима freeze
+    private Vector3 frozenPivotPosition;
+    private float frozenHeight;
+    private float frozenRotationY;
+    private float frozenAngleX;
+    
+    void Awake()
+    {
+        // Установка статического Instance
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+        
+        // Инициализация ObservableCollection с обработчиком изменений
+        stackTypes = new ObservableCollection<camType>();
+        stackTypes.CollectionChanged += (sender, e) => 
+        {
+            // Обработка изменений состояний камеры
+            OnCameraStateChanged();
+        };
+        
+        // Добавляем базовое состояние
+        stackTypes.Add(camType.strategy);
+    }
+    
     void Start()
     {
         // Получение компонента камеры
@@ -67,11 +115,11 @@ public class SHIP_CAMERA : MonoBehaviour
 
     void Update()
     {
-        HandleMouseWheel();
+        HandleCameraTypeSwitch();
         HandleMouseRotation();
         
-        // Отключаем движение только если не вращаем камеру
-        if (!isRotating)
+        // Отключаем движение только если не вращаем камеру и не в режиме freeze
+        if (!isRotating && !IsInFreezeMode())
         {
             HandleKeyboardInput();
             HandleMouseEdgeScrolling();
@@ -128,6 +176,12 @@ public class SHIP_CAMERA : MonoBehaviour
     
     private void HandleMouseEdgeScrolling()
     {
+        // Проверка, что мышь находится в пределах окна игры
+        if (!IsMouseInGameWindow())
+        {
+            return;
+        }
+        
         Vector3 edgeMovement = Vector3.zero;
         
         // Проверка позиции мыши относительно краёв экрана
@@ -169,18 +223,25 @@ public class SHIP_CAMERA : MonoBehaviour
         }
     }
     
-    private void HandleMouseWheel()
+    private bool IsMouseInGameWindow()
     {
-        float scrollInput = Input.GetAxis("Mouse ScrollWheel");
-        if (scrollInput != 0f)
-        {
-            targetHeight -= scrollInput * heightChangeSpeed;
-            targetHeight = Mathf.Clamp(targetHeight, minHeight, maxHeight);
-        }
+        // Проверка, что мышь находится в пределах окна игры
+        Vector3 mousePosition = Input.mousePosition;
+        
+        // Проверяем, что координаты мыши находятся в пределах размеров экрана
+        return mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
+               mousePosition.y >= 0 && mousePosition.y <= Screen.height;
     }
     
+
+    
+    // Метод для вращения камеры и зума при зажатой средней кнопке мыши
+    // (в отличие от обычного колеса мыши, которое используется для смены этажей)
     private void HandleMouseRotation()
     {
+        // Отключаем вращение в режиме freeze
+        if (IsInFreezeMode()) return;
+        
         // Начало вращения при зажатии средней кнопки мыши
         if (Input.GetMouseButtonDown(2))
         {
@@ -194,7 +255,7 @@ public class SHIP_CAMERA : MonoBehaviour
             isRotating = false;
         }
         
-        // Вращение камеры вокруг пивота (только по горизонтали)
+        // Вращение камеры вокруг пивота при зажатой средней кнопке мыши
         if (isRotating)
         {
             Vector3 mouseDelta = Input.mousePosition - lastMousePosition;
@@ -205,32 +266,58 @@ public class SHIP_CAMERA : MonoBehaviour
             
             lastMousePosition = Input.mousePosition;
         }
+        
+        // Обработка зума при зажатой средней кнопке мыши
+        if (Input.GetMouseButton(2))
+        {
+            float scrollInput = Input.GetAxis("Mouse ScrollWheel");
+            if (scrollInput != 0f)
+            {
+                targetHeight -= scrollInput * heightChangeSpeed;
+                targetHeight = Mathf.Clamp(targetHeight, minHeight, maxHeight);
+            }
+        }
     }
     
     private void ApplySmoothMovement()
     {
-        // Плавное движение пивота к целевой позиции
-        cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, targetPivotPosition, smoothness * Time.deltaTime);
-        
-        // Плавное изменение высоты камеры
-        Vector3 localPosition = transform.localPosition;
-        localPosition.y = Mathf.Lerp(localPosition.y, targetHeight, smoothness * Time.deltaTime);
-        transform.localPosition = localPosition;
-        
-        // Обновление угла наклона и FOV в зависимости от высоты
-        UpdateCameraAngleAndFOV();
-        
-        // Плавное вращение пивота (если не вращаем мышью)
-        if (!isRotating)
+        if (IsInFreezeMode())
         {
-            Quaternion targetPivotRotation = Quaternion.Euler(0f, targetRotationY, 0f);
-            cameraPivot.transform.rotation = Quaternion.Lerp(cameraPivot.transform.rotation, targetPivotRotation, smoothness * Time.deltaTime);
+            // В режиме freeze используем замороженные значения
+            cameraPivot.transform.position = frozenPivotPosition;
+            
+            Vector3 localPosition = transform.localPosition;
+            localPosition.y = frozenHeight;
+            transform.localPosition = localPosition;
+            
+            cameraPivot.transform.rotation = Quaternion.Euler(0f, frozenRotationY, 0f);
+            transform.localRotation = Quaternion.Euler(frozenAngleX, 0f, 0f);
         }
-        
-        // Плавная интерполяция угла наклона камеры
-        Vector3 currentLocalRotation = transform.localEulerAngles;
-        Vector3 targetLocalRotation = new Vector3(targetAngleX, 0f, 0f);
-        transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(targetLocalRotation), smoothness * Time.deltaTime);
+        else
+        {
+            // Плавное движение пивота к целевой позиции
+            cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, targetPivotPosition, smoothness * Time.deltaTime);
+            
+            // Плавное изменение высоты камеры
+            Vector3 localPosition = transform.localPosition;
+            localPosition.y = Mathf.Lerp(localPosition.y, targetHeight, smoothness * Time.deltaTime);
+            transform.localPosition = localPosition;
+            
+            // Обновление угла наклона и FOV в зависимости от высоты
+            UpdateCameraAngleAndFOV();
+            
+            // Плавное вращение пивота (если не вращаем мышью)
+            if (!isRotating)
+            {
+                Quaternion targetPivotRotation = Quaternion.Euler(0f, targetRotationY, 0f);
+                cameraPivot.transform.rotation = Quaternion.Lerp(cameraPivot.transform.rotation, targetPivotRotation, smoothness * Time.deltaTime);
+            }
+            
+            // Плавная интерполяция угла наклона камеры
+            Vector3 currentLocalRotation = transform.localEulerAngles;
+            Vector3 targetLocalRotation = new Vector3(targetAngleX, 0f, 0f);
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(targetLocalRotation), smoothness * Time.deltaTime);
+        }
     }
     
     private void UpdateCameraAngleAndFOV()
@@ -291,5 +378,170 @@ public class SHIP_CAMERA : MonoBehaviour
     public float GetCameraRotation()
     {
         return transform.eulerAngles.y;
+    }
+    
+    // Метод для получения текущего типа камеры (для отладки)
+    public string GetCurrentCameraTypeString()
+    {
+        return GetCurrentCameraType().ToString();
+    }
+    
+    // Метод для проверки, находится ли камера в определенном режиме
+    public bool IsInMode(camType type)
+    {
+        return GetCurrentCameraType() == type;
+    }
+    
+    // Метод для разморозки камеры (переключение из режима freeze)
+    public void UnfreezeCamera()
+    {
+        if (IsInFreezeMode())
+        {
+            SetCameraType(camType.strategy);
+        }
+    }
+
+    // Метод для переключения типов камеры
+    private void HandleCameraTypeSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            SwitchToNextCameraType();
+        }
+    }
+    
+    // Метод для переключения на следующий тип камеры
+    public void SwitchToNextCameraType()
+    {
+        camType currentType = GetCurrentCameraType();
+        camType nextType = GetNextCameraType(currentType);
+        
+        // Удаляем текущий тип и добавляем следующий
+        stackTypes.Remove(currentType);
+        stackTypes.Add(nextType);
+        
+        Debug.Log($"SHIP_CAMERA: Переключение на режим {nextType}");
+    }
+    
+    // Метод для получения следующего типа камеры
+    private camType GetNextCameraType(camType currentType)
+    {
+        switch (currentType)
+        {
+            case camType.strategy:
+                return camType.firstPerson;
+            case camType.firstPerson:
+                return camType.free;
+            case camType.free:
+                return camType.freeze;
+            case camType.freeze:
+                return camType.strategy;
+            default:
+                return camType.strategy;
+        }
+    }
+    
+    // Метод для получения текущего типа камеры
+    public camType GetCurrentCameraType()
+    {
+        return stackTypes.LastOrDefault();
+    }
+    
+    // Метод для проверки, находимся ли в режиме freeze
+    private bool IsInFreezeMode()
+    {
+        return GetCurrentCameraType() == camType.freeze;
+    }
+    
+    // Метод для обработки изменений состояния камеры
+    private void OnCameraStateChanged()
+    {
+        camType newType = GetCurrentCameraType();
+        
+        switch (newType)
+        {
+            case camType.freeze:
+                // Замораживаем текущее положение камеры
+                FreezeCameraPosition();
+                break;
+            case camType.firstPerson:
+                // Настройки для режима от первого лица
+                SetupFirstPersonMode();
+                break;
+            case camType.free:
+                // Настройки для свободной камеры
+                SetupFreeMode();
+                break;
+            case camType.strategy:
+                // Настройки для стратегического режима
+                SetupStrategyMode();
+                break;
+        }
+    }
+    
+    // Метод для заморозки текущего положения камеры
+    private void FreezeCameraPosition()
+    {
+        frozenPivotPosition = cameraPivot.transform.position;
+        frozenHeight = transform.localPosition.y;
+        frozenRotationY = cameraPivot.transform.eulerAngles.y;
+        frozenAngleX = transform.localEulerAngles.x;
+        
+        Debug.Log("SHIP_CAMERA: Камера заморожена в текущем положении");
+    }
+    
+    // Метод для настройки режима от первого лица
+    private void SetupFirstPersonMode()
+    {
+        // Устанавливаем низкую высоту и широкий угол обзора
+        targetHeight = 2f;
+        if (cameraComponent != null)
+        {
+            cameraComponent.fieldOfView = 90f;
+        }
+        
+        Debug.Log("SHIP_CAMERA: Переключение в режим от первого лица");
+    }
+    
+    // Метод для настройки свободного режима
+    private void SetupFreeMode()
+    {
+        // Убираем ограничения движения
+        Debug.Log("SHIP_CAMERA: Переключение в свободный режим");
+    }
+    
+    // Метод для настройки стратегического режима
+    private void SetupStrategyMode()
+    {
+        // Возвращаем стандартные настройки
+        targetHeight = Mathf.Clamp(targetHeight, minHeight, maxHeight);
+        Debug.Log("SHIP_CAMERA: Переключение в стратегический режим");
+    }
+    
+    // Публичные методы для внешнего управления состоянием камеры
+    public void SetCameraType(camType type)
+    {
+        camType currentType = GetCurrentCameraType();
+        if (currentType != type)
+        {
+            stackTypes.Remove(currentType);
+            stackTypes.Add(type);
+        }
+    }
+    
+    public void AddCameraType(camType type)
+    {
+        if (!stackTypes.Contains(type))
+        {
+            stackTypes.Add(type);
+        }
+    }
+    
+    public void RemoveCameraType(camType type)
+    {
+        if (stackTypes.Contains(type))
+        {
+            stackTypes.Remove(type);
+        }
     }
 }

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0c1c7d6b02eacf4fa642ada77ce6873, type: 3}
+  m_Name: ship_hull
+  m_EditorClassIdentifier: 
+  isBuildMode: 0
+  spawn_scale_local: {x: 0.25, y: 1, z: 0.25}
+  spawn_position_local: {x: 0, y: 1, z: 0}
+  spawn_delay: 0.1
+  animationType: 1
+  animationDuration: 0.01
+  animationDurationLocal: 0
+  showAnimation: 1
