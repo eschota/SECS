@@ -7,6 +7,7 @@ public class grid_cells : MonoBehaviour
     float timer_to_show_grid_cells = 3;
     [SerializeField] int grid_size;
     [SerializeField] io_base cell;
+    [SerializeField] io_base_stair stair_cell;
 
     [SerializeField]List<io_base> grid_cells_list;
 
@@ -18,8 +19,8 @@ public class grid_cells : MonoBehaviour
         {
             for (int j = 0; j < grid_size; j++)
             {
-                io_base io = Instantiate(cell, new Vector3(i - grid_size / 2, 0, j - grid_size / 2), Quaternion.identity);
-                io.transform.parent = transform;
+                io_base io = Instantiate(cell, new Vector3(i - grid_size / 2, 0, j - grid_size / 2), Quaternion.identity).GetComponent<io_base>();
+                io.Init(transform);
                 io.name = "Grid Cell " + i + " " + j;
                 
                 io.target_collider.gameObject.name = "Cell_Collider " + i + " " + j;

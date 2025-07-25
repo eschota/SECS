@@ -20,7 +20,7 @@ public class io_base : MonoBehaviour
     Vector3 originalScale;
     Vector3 originalPosition;
     quaternion originalRotation;
-    [SerializeField] public MeshRenderer target_mesh_renderer;
+    [SerializeField] public MeshRenderer[] target_mesh_renderer;
 
     [SerializeField] private List<StateAnimation> stateAnimations = new List<StateAnimation>();
     [SerializeField] private io_base_transform_animation defaultAnimation;
@@ -51,6 +51,12 @@ public class io_base : MonoBehaviour
 
     protected virtual void Awake()
     {
+        
+    }
+
+    public virtual void Init(Transform parent)
+    {
+        transform.parent = parent;
         // Инициализируем ObservableCollection с обработчиком изменений
         _io_type_stack = new ObservableCollection<io_type>();
         _io_type_stack.CollectionChanged += (sender, e) => 
@@ -63,11 +69,20 @@ public class io_base : MonoBehaviour
         originalScale = transform.localScale;
         originalPosition = transform.localPosition;
         originalRotation = transform.localRotation;
-        target_transform.localScale = stateAnimations[0].animation.targetScale;
-        target_transform.localPosition = stateAnimations[0].animation.targetPosition;        
         
+        // Инициализируем target_transform только если есть анимации
+        if (stateAnimations != null && stateAnimations.Count > 0 && stateAnimations[0].animation != null)
+        {
+            target_transform.localScale = stateAnimations[0].animation.targetScale;
+            target_transform.localPosition = stateAnimations[0].animation.targetPosition;
+        }
+        else
+        {
+            // Если анимаций нет, используем текущие значения
+            target_transform.localScale = originalScale;
+            target_transform.localPosition = originalPosition;
+        }
     }
-
     // Update is called once per frame
     void Update()
     {
@@ -84,8 +99,11 @@ public class io_base : MonoBehaviour
         // Validate quaternions before interpolation to avoid assertion errors
         Quaternion startRotation = originalRotation;
         Quaternion endRotation = current_animation.targetRotation;
-        target_mesh_renderer.material.color = Color.Lerp(target_mesh_renderer.material.color, current_animation.targetColor, current_animation.curve.Evaluate(localTimer / current_animation.duration));
-        target_mesh_renderer.material.SetColor("_EmissionColor", Color32.Lerp(target_mesh_renderer.material.GetColor("_EmissionColor"), current_animation.targetEmissionColor, current_animation.curve.Evaluate(localTimer / current_animation.duration)));
+        for (int i = 0; i < target_mesh_renderer.Length; i++)
+        {
+            target_mesh_renderer[i].material.color = Color.Lerp(target_mesh_renderer[i].material.color, current_animation.targetColor, current_animation.curve.Evaluate(localTimer / current_animation.duration));
+            target_mesh_renderer[i].material.SetColor("_EmissionColor", Color32.Lerp(target_mesh_renderer[i].material.GetColor("_EmissionColor"), current_animation.targetEmissionColor, current_animation.curve.Evaluate(localTimer / current_animation.duration)));
+        }
         // Check if quaternions are valid (not zero magnitude)
         if (startRotation.x == 0 && startRotation.y == 0 && startRotation.z == 0 && startRotation.w == 0)
         {
@@ -101,14 +119,14 @@ public class io_base : MonoBehaviour
 
     private io_base_transform_animation GetAnimationForState()
     {
-        foreach (var state in stateAnimations)
+        if (stateAnimations == null || stateAnimations.Count == 0)
         {
-            if (state.state == io_type_stack.LastOrDefault(x => x != io_type.off))
-            {
-                return state.animation;
-            }
+            return defaultAnimation;
         }
-        // Возвращаем дефолтную анимацию если для данного состояния нет анимации
-        return defaultAnimation;
+
+        var currentState = _io_type_stack.LastOrDefault();
+        var stateAnimation = stateAnimations.FirstOrDefault(sa => sa.state == currentState);
+        
+        return stateAnimation.animation != null ? stateAnimation.animation : defaultAnimation;
     }
 }

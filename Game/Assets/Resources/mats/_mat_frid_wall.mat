@@ -149,7 +149,7 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FadeCenter: {r: 24.310413, g: -2.0945775e-16, b: 9.433138, a: 0}
+    - _FadeCenter: {r: 4.9551744, g: 0, b: -1.2842808, a: 0}
     - _FadeColor: {r: 0, g: 0.11642933, b: 1, a: 1}
     - _GridColor: {r: 0.01775543, g: 0.1792453, b: 0.1792453, a: 0}
     - _PulseColorAlt: {r: 1, g: 0, b: 0, a: 1}
