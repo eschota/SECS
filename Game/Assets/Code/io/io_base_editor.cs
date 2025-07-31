@@ -7,46 +7,27 @@ public class io_base_editor : Editor
 {
     public override void OnInspectorGUI()
     {
-        io_base ioBase = (io_base)target;
-        
-        // Рисуем стандартные поля
         DrawDefaultInspector();
         
+        io_base ioBase = (io_base)target;
+        
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("State Animations", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Управление анимациями", EditorStyles.boldLabel);
         
-        // Получаем сериализованное свойство для stateAnimations
-        SerializedProperty stateAnimationsProp = serializedObject.FindProperty("stateAnimations");
-        
-        if (stateAnimationsProp != null)
+        if (GUILayout.Button("Обновить анимации", GUILayout.Height(30)))
         {
-            EditorGUI.indentLevel++;
-            
-            // Показываем текущие настройки анимаций
-            for (int i = 0; i < stateAnimationsProp.arraySize; i++)
-            {
-                SerializedProperty element = stateAnimationsProp.GetArrayElementAtIndex(i);
-                SerializedProperty stateProp = element.FindPropertyRelative("state");
-                SerializedProperty animationProp = element.FindPropertyRelative("animation");
-                
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.PropertyField(stateProp, GUIContent.none, GUILayout.Width(100));
-                EditorGUILayout.PropertyField(animationProp, GUIContent.none);
-                EditorGUILayout.EndHorizontal();
-            }
-            
-            EditorGUI.indentLevel--;
-            
-            EditorGUILayout.Space();
-            
-            // Кнопка для добавления новой анимации
-            if (GUILayout.Button("Add State Animation"))
-            {
-                stateAnimationsProp.arraySize++;
-                serializedObject.ApplyModifiedProperties();
-            }
+            ioBase.RefreshAnimations();
         }
         
-        serializedObject.ApplyModifiedProperties();
+        if (GUILayout.Button("Очистить список анимаций", GUILayout.Height(25)))
+        {
+            SerializedProperty stateAnimationsProp = serializedObject.FindProperty("stateAnimations");
+            stateAnimationsProp.ClearArray();
+            serializedObject.ApplyModifiedProperties();
+            Debug.Log("Список анимаций очищен!");
+        }
+        
+        EditorGUILayout.Space();
+        EditorGUILayout.HelpBox("Анимации автоматически назначаются по типу animation_type_current компонентов io_base_transform_animation", MessageType.Info);
     }
 } 

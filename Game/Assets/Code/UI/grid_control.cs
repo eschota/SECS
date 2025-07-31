@@ -70,7 +70,7 @@ public class grid_control : MonoBehaviour
         
         // Инициализируем параметры шейдера
         UpdateShaderParameters();
-        Debug.Log("Grid control initialized");
+//        Debug.Log("Grid control initialized");
 #endif
     }
     
@@ -193,7 +193,7 @@ public class grid_control : MonoBehaviour
         fadeCurveTexture.SetPixels(pixels);
         fadeCurveTexture.Apply();
         
-        Debug.Log("Fade curve texture created");
+//        Debug.Log("Fade curve texture created");
     }
 #endif
     

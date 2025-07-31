@@ -232,12 +232,12 @@ public class DynamicTooltip : MonoBehaviour
         // Логируем результат валидации
         if (!string.IsNullOrEmpty(validationErrors))
         {
-            Debug.LogWarning($"Tooltip validation completed with auto-fixes: {validationErrors}");
+      //      Debug.LogWarning($"Tooltip validation completed with auto-fixes: {validationErrors}");
             isValid = false;
         }
         else
         {
-            Debug.Log("Tooltip validation passed successfully");
+//            Debug.Log("Tooltip validation passed successfully");
         }
         
         return isValid;

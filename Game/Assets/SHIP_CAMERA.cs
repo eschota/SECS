@@ -515,7 +515,7 @@ public class SHIP_CAMERA : MonoBehaviour
     {
         // Возвращаем стандартные настройки
         targetHeight = Mathf.Clamp(targetHeight, minHeight, maxHeight);
-        Debug.Log("SHIP_CAMERA: Переключение в стратегический режим");
+//        Debug.Log("SHIP_CAMERA: Переключение в стратегический режим");
     }
     
     // Публичные методы для внешнего управления состоянием камеры

@@ -13,11 +13,20 @@ public class combine_collider : MonoBehaviour
     [SerializeField] private bool useConvexHull = true;
     [SerializeField] private bool includeChildren = true;
     
+    [Header("Сохранение в префаб")]
+    [SerializeField] private bool saveToPrefab = true;
+    [SerializeField] private Mesh savedCombinedMesh;
+    
     private MeshCollider generatedCollider;
     
     void Start()
     {
-        if (autoGenerateOnStart)
+        // Если есть сохраненный меш, используем его
+        if (saveToPrefab && savedCombinedMesh != null)
+        {
+            CreateColliderFromSavedMesh();
+        }
+        else if (autoGenerateOnStart)
         {
             GenerateCombinedCollider();
         }
@@ -50,7 +59,17 @@ public class combine_collider : MonoBehaviour
         if (combinedMesh != null)
         {
             generatedCollider.sharedMesh = combinedMesh;
-            Debug.Log($"Коллайдер успешно сгенерирован из {targetObjects.Count} объектов!");
+            
+            // Сохраняем меш если включена опция сохранения в префаб
+            if (saveToPrefab)
+            {
+                savedCombinedMesh = combinedMesh;
+                Debug.Log($"Коллайдер успешно сгенерирован и сохранен в префаб из {targetObjects.Count} объектов!");
+            }
+            else
+            {
+                Debug.Log($"Коллайдер успешно сгенерирован из {targetObjects.Count} объектов!");
+            }
         }
         else
         {
@@ -95,6 +114,31 @@ public class combine_collider : MonoBehaviour
         combinedMesh.CombineMeshes(combineInstances.ToArray(), true, true);
         
         return combinedMesh;
+    }
+    
+    private void CreateColliderFromSavedMesh()
+    {
+        if (savedCombinedMesh == null)
+        {
+            Debug.LogWarning("Сохраненный меш не найден!");
+            return;
+        }
+        
+        // Очищаем старый коллайдер если есть
+        ClearCollider();
+        
+        // Создаем новый MeshCollider с сохраненным мешем
+        generatedCollider = gameObject.AddComponent<MeshCollider>();
+        generatedCollider.isTrigger = isTrigger;
+        generatedCollider.convex = useConvexHull;
+        generatedCollider.sharedMesh = savedCombinedMesh;
+        
+        if (physicMaterial != null)
+        {
+            generatedCollider.material = physicMaterial;
+        }
+        
+        Debug.Log("Коллайдер создан из сохраненного меша!");
     }
     
     [ContextMenu("Очистить коллайдер")]
@@ -166,6 +210,27 @@ public class combine_collider : MonoBehaviour
     {
         targetObjects.Clear();
         Debug.Log("Список объектов очищен!");
+    }
+    
+    [ContextMenu("Сохранить меш в префаб")]
+    public void SaveMeshToPrefab()
+    {
+        if (generatedCollider != null && generatedCollider.sharedMesh != null)
+        {
+            savedCombinedMesh = generatedCollider.sharedMesh;
+            Debug.Log("Меш сохранен в префаб!");
+        }
+        else
+        {
+            Debug.LogWarning("Нет активного коллайдера для сохранения!");
+        }
+    }
+    
+    [ContextMenu("Очистить сохраненный меш")]
+    public void ClearSavedMesh()
+    {
+        savedCombinedMesh = null;
+        Debug.Log("Сохраненный меш очищен!");
     }
     
     void OnValidate()

@@ -54,7 +54,7 @@ public class TooltipManager : MonoBehaviour
         // Проверяем, что тултип создан успешно
         if (tooltip == null)
         {
-            Debug.LogError("Failed to create tooltip!");
+            
         }
         else
         {
@@ -62,11 +62,11 @@ public class TooltipManager : MonoBehaviour
             bool isValid = tooltip.ValidateTooltip();
             if (isValid)
             {
-                Debug.Log("TooltipManager initialized successfully with valid tooltip");
+               
             }
             else
             {
-                Debug.LogWarning("TooltipManager initialized with auto-fixed tooltip");
+               
             }
         }
     }
@@ -130,7 +130,7 @@ public class TooltipManager : MonoBehaviour
             // Проверяем валидность тултипа перед показом
             if (!tooltip.IsValid())
             {
-                Debug.LogWarning("Tooltip is not valid, attempting to fix...");
+               
                 tooltip.ValidateTooltip();
             }
             
@@ -181,11 +181,11 @@ public class TooltipManager : MonoBehaviour
     {
         if (tooltip == null)
         {
-            Debug.LogWarning("Tooltip is null, attempting to create...");
+            
             CreateTooltip();
             if (tooltip == null)
             {
-                Debug.LogError("Failed to create tooltip for validation");
+               
                 return false;
             }
         }
@@ -193,11 +193,11 @@ public class TooltipManager : MonoBehaviour
         bool isValid = tooltip.ValidateTooltip();
         if (isValid)
         {
-            Debug.Log("Tooltip validation passed successfully");
+           
         }
         else
         {
-            Debug.LogWarning("Tooltip validation completed with auto-fixes");
+           
         }
         
         return isValid;
@@ -225,17 +225,17 @@ public class TooltipManager : MonoBehaviour
             
             if (tooltip != null)
             {
-                Debug.Log("Tooltip created from prefab successfully");
+               
             }
             else
             {
-                Debug.LogError("Failed to find DynamicTooltip component in prefab");
+              
                 CreateTooltipManually();
             }
         }
         else
         {
-            Debug.LogWarning("Tooltip prefab not found in Resources/UI/Base_Tooltip_Prefab, creating manually");
+           
             CreateTooltipManually();
         }
     }
@@ -273,11 +273,11 @@ public class TooltipManager : MonoBehaviour
         bool isValid = tooltip.ValidateTooltip();
         if (isValid)
         {
-            Debug.Log("Tooltip created manually successfully");
+           
         }
         else
         {
-            Debug.LogWarning("Tooltip created manually with auto-fixes");
+            
         }
     }
     
