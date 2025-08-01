@@ -49,37 +49,37 @@ public class CreateAnimationSOs : MonoBehaviour
             case io_base.io_type.off:
                 so.targetScale = Vector3.one;
                 so.targetColor = Color.gray;
-                so.duration = 0.3f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
             case io_base.io_type.on:
                 so.targetScale = Vector3.one;
                 so.targetColor = Color.white;
-                so.duration = 0.3f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
             case io_base.io_type.mouseOver:
                 so.targetScale = Vector3.one * 1.1f;
                 so.targetColor = Color.yellow;
-                so.duration = 0.2f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
             case io_base.io_type.selected:
                 so.targetScale = Vector3.one * 1.2f;
                 so.targetColor = Color.blue;
-                so.duration = 0.3f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
             case io_base.io_type.clicked:
                 so.targetScale = Vector3.one * 0.9f;
                 so.targetColor = Color.green;
-                so.duration = 0.1f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
             case io_base.io_type.ToRemove:
                 so.targetScale = Vector3.zero;
                 so.targetColor = new Color(1, 0, 0, 0);
-                so.duration = 1.0f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
             default:
                 so.targetScale = Vector3.one;
                 so.targetColor = Color.white;
-                so.duration = 0.5f;
+                so.curve = AnimationCurve.Linear(0, 0, 1, 1);
                 break;
         }
 

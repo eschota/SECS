@@ -37,10 +37,10 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  targetScale: {x: 1.1, y: 1.1, z: 1.1}
-  targetPosition: {x: 0, y: 0.1, z: 0}
+  targetScale: {x: 0.9, y: 1.1, z: 0.9}
+  targetPosition: {x: 0, y: 0, z: 0}
   targetRotation: {x: 0, y: 0, z: 0, w: 1}
-  targetColor: {r: 0.7859002, g: 0.02647741, b: 0.8018868, a: 1}
+  targetColor: {r: 0.9796953, g: 0, b: 1, a: 1}
   targetEmissionColor:
     serializedVersion: 2
     rgba: 4278190335

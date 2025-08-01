@@ -1,4 +1,5 @@
 using System.Buffers.Text;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -11,6 +12,17 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(Transform))]
 public class io_base : MonoBehaviour
 { 
+    public int[] grid_position=new int[3];
+    public void SetGridPosition(Vector3 position){
+        grid_position[0]=Mathf.RoundToInt(position.x*10);
+        grid_position[1]=Mathf.RoundToInt(position.y*10);
+        grid_position[2]=Mathf.RoundToInt(position.z*10);
+    }
+    public void GetGridPosition(Vector3 position){
+        position.x=grid_position[0]/10;
+        position.y=grid_position[1]/10;
+        position.z=grid_position[2]/10;
+    }
     [SerializeField] public List<io_type> stack = new List<io_type>();
 
     [SerializeField] public io_base_cell_type cell_type; public enum io_base_cell_type
@@ -110,69 +122,182 @@ public class io_base : MonoBehaviour
     { 
         stack = new List<io_type>();
         stack.Clear();
-        stack.Add(io_type.off);
+        AddStack(io_type.off);
         // НЕ добавляем в io_system автоматически - это делается вручную в grid_cells
         // io_system.instance.io_list.Add(this);
         InitializeCell();
     }
-  
+  void Update()
+    { 
+
+            // if (gameObject.name == "cell_wall_wall(Clone)")
+            // {
+            //     Debug.Log("cell_wall_wall(Clone)");
+            // }
+
+
+
+
+        // Обновляем анимацию вращения направления
+        var directionAnimation = GetComponent<io_base_transform_animation>();
+        if (directionAnimation != null)
+        {
+            directionAnimation.UpdateDirectionLerp();
+        }
+        
+        localTimer += Time.deltaTime;
+        if(stack.Count == 0 || stack==null) return;
+
+                if (stack.Last() == io_type.ToRemove)
+        {
+            var animSO = GetCurrentAnimationSO();
+            if (animSO != null && localTimer > animSO.curve.keys[animSO.curve.keys.Length-1].time)
+            {
+                Destroy(gameObject, (localTimer * localTimer % 1) / 3);
+                return;
+            }
+            else
+            {
+                 Destroy(gameObject);
+                return;
+            }
+            
+        
+        
+            // Выполняем анимацию исчезновения
+            float progress = localTimer / animSO.curve.keys[animSO.curve.keys.Length-1].time;
+            localTimer=Mathf.Clamp(localTimer, 0, 1);
+            target_transform.localScale = new Vector3(Mathf.Max(target_transform.localScale.x*animSO.curve.Evaluate(localTimer), 0.01f), Mathf.Max(target_transform.localScale.y*animSO.curve.Evaluate(localTimer), 0.01f), Mathf.Max(target_transform.localScale.z*animSO.curve.Evaluate(localTimer), 0.01f));
+            target_transform.localPosition = Vector3.Lerp(target_transform.localPosition, animSO.targetPosition, animSO.curve.Evaluate(localTimer));
+            target_transform.localRotation = Quaternion.Slerp(target_transform.localRotation, animSO.targetRotation, animSO.curve.Evaluate(localTimer));
+            
+            // Анимация цвета
+            for (int i = 0; i < target_mesh_renderer.Length; i++)
+            {
+                if (target_mesh_renderer[i] != null && target_mesh_renderer[i].material != null)
+                {
+                    target_mesh_renderer[i].material.color = Color.Lerp(target_mesh_renderer[i].material.color, animSO.targetColor, animSO.curve.Evaluate(progress));
+                    target_mesh_renderer[i].material.SetColor("_EmissionColor", Color32.Lerp(target_mesh_renderer[i].material.GetColor("_EmissionColor"), animSO.targetEmissionColor, animSO.curve.Evaluate(progress)));
+                }
+            }
+            return;
+        } 
+        var currentAnimSO = GetCurrentAnimationSO();
+        if (currentAnimSO == null) return;
+
+        if (currentAnimSO.animation_type_current == io_type.hidden)
+        {
+            ;    
+        }
+        
+
+        target_transform.localScale = Vector3.Lerp(target_transform.localScale, currentAnimSO.targetScale, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.curve.keys[currentAnimSO.curve.keys.Length-1].time));
+        if(target_transform.localScale.magnitude<0.01f)
+        {
+            target_transform.localScale=new Vector3(0.01f,0.01f,0.01f);
+        }
+       
+        target_transform.localPosition = Vector3.Lerp(target_transform.localPosition, currentAnimSO.targetPosition, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.curve.keys[currentAnimSO.curve.keys.Length-1].time));
+            // Validate quaternions before interpolation to avoid assertion errors
+        Quaternion endRotation = Quaternion.Euler(0, direction * 90f, 0);   
+        target_transform.localRotation = Quaternion.Slerp(target_transform.localRotation, endRotation, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.curve.keys[currentAnimSO.curve.keys.Length-1].time));
+        // Анимация цвета
+        for (int i = 0; i < target_mesh_renderer.Length; i++)
+        {
+            if (target_mesh_renderer[i] != null && target_mesh_renderer[i].material != null)
+            {
+                target_mesh_renderer[i].material.color = Color.Lerp(target_mesh_renderer[i].material.color, currentAnimSO.targetColor, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.curve.keys[currentAnimSO.curve.keys.Length-1].time));
+                target_mesh_renderer[i].material.SetColor("_EmissionColor", Color32.Lerp(target_mesh_renderer[i].material.GetColor("_EmissionColor"), currentAnimSO.targetEmissionColor, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.curve.keys[currentAnimSO.curve.keys.Length-1].time)));
+            }
+        }
+    }
+    //corutine for activate cell
+    public IEnumerator ActivateCell(float duration)
+    {
+        
+        yield return new WaitForSeconds(duration);
+        if(stack.Count==0) stack.Add(io_type.off);
+        AddStack(io_type.on);
+    }
     public void AddStack(io_type type)
     {
         if (stack.Count == 0) return;
-        if (stack.Last() == type) return;
+        if (stack.Last() == type)
+        {
+            gameObject.name = $"{type}" + "_" + "[{grid_position[0]},{grid_position[1]},{grid_position[2]}]";
+            transform.SetParent(matrix.instance.parents_by_type[0]);
+            transform.SetAsFirstSibling();
+            return;
+        }
+        gameObject.name = $"{type}" + "_" + "[{grid_position[0]},{grid_position[1]},{grid_position[2]}]";
         if (stack.Last() == io_type.ToRemove) return;
-        
+
         // Дополнительная проверка - если объект помечен на удаление, не добавляем новые состояния
         if (stack.Contains(io_type.ToRemove)) return;
-        
+
         // Сохраняем предыдущее состояние для проверки изменений
         io_type previousState = stack.Count > 0 ? stack.Last() : io_type.off;
-        
+
         // проверяем если последний это маусовер то надо его выбрать дать. иначе игнорировать добавление копии маусовера.
         if (stack.Last() == io_type.mouseOver)
         {
             if (type != io_type.mouseOver) stack.Add(type);
             return;
         }
-        
+
         stack.Add(type);
-        
+        switch (type)
+        {
+            case io_type.off:
+                transform.parent = matrix.instance.parents_by_type[0];
+                transform.SetAsFirstSibling();
+                matrix.instance.parents_by_type[0].name = "OFF" + " count: " + matrix.instance.parents_by_type[0].childCount;
+
+                break;
+            case io_type.on:
+                transform.parent = matrix.instance.parents_by_type[1];
+                transform.SetAsFirstSibling();
+                matrix.instance.parents_by_type[1].name = "ON" + " count: " + matrix.instance.parents_by_type[1].childCount;
+                break;
+            case io_type.toggle:
+                transform.parent = matrix.instance.parents_by_type[2];
+                transform.SetAsFirstSibling();
+                matrix.instance.parents_by_type[2].name = "TOGGLE" + " count: " + matrix.instance.parents_by_type[2].childCount;
+                break;
+            case io_type.mouseOver:
+                transform.parent = matrix.instance.parents_by_type[3];
+                transform.SetAsFirstSibling();
+                matrix.instance.parents_by_type[3].name = "MOUSEOVER" + " count: " + matrix.instance.parents_by_type[3].childCount;
+                break;
+            case io_type.selected:
+                transform.parent = matrix.instance.parents_by_type[4];
+                transform.SetAsFirstSibling();
+                matrix.instance.parents_by_type[4].name = "SELECTED" + " count: " + matrix.instance.parents_by_type[4].childCount;
+                break;
+            case io_type.clicked:
+                transform.parent = matrix.instance.parents_by_type[5];
+                transform.SetAsFirstSibling();
+                matrix.instance.parents_by_type[5].name = "CLICKED" + " count: " + matrix.instance.parents_by_type[5].childCount;
+                break;
+            case io_type.deselected:
+                transform.parent = matrix.instance.parents_by_type[6];
+                matrix.instance.parents_by_type[6].name = "DESELECTED" + " count: " + matrix.instance.parents_by_type[6].childCount;
+                transform.SetAsFirstSibling();
+                break;
+        }
+
         // Сбрасываем таймер только если это не повторное добавление mouseOver
         // или если предыдущее состояние не было mouseOver
         if (type != io_type.mouseOver || previousState != io_type.mouseOver)
         {
             localTimer = 0;
         }
-        
-        // Управляем parent'ом в зависимости от состояния
-        ManageParentByState(previousState, type);
+
     }
     
-    private void ManageParentByState(io_type previousState, io_type newState)
+    public void rename_cell(string name)
     {
-        // Если переходим в clicked - убираем из общего пула
-        if (newState == io_type.clicked && previousState != io_type.clicked)
-        {
-            if (transform.parent != null)
-            {
-                transform.parent = null;
-//                Debug.Log($"Клетка {gameObject.name} выведена из общего пула (статус: clicked)");
-            }
-        }
-        // Если выходим из clicked в обычное состояние - возвращаем в общий пул
-        else if (previousState == io_type.clicked && newState != io_type.clicked)
-        {
-            if (transform.parent == null)
-            {
-                // Ищем grid_cells как родительский объект для клеток
-                grid_cells gridCellsParent = FindObjectOfType<grid_cells>();
-                if (gridCellsParent != null)
-                {
-                    transform.parent = gridCellsParent.transform;
-             //       Debug.Log($"Клетка {gameObject.name} возвращена в общий пул (статус: {newState})");
-                }
-            }
-        }
+        gameObject.name = name;
     }
     
     // Метод для проверки, можно ли взаимодействовать с объектом
@@ -247,8 +372,7 @@ public class io_base : MonoBehaviour
  
 
     public virtual void Init(Transform parent)
-    {
-        transform.parent = parent;
+    { 
         // Для каждого target_mesh_renderer создаём новый экземпляр материала, чтобы не использовать sharedMaterial
         if (target_mesh_renderer != null)
         {
@@ -266,8 +390,7 @@ public class io_base : MonoBehaviour
         {
             target_transform.localScale = stateAnimations[0].targetScale;
             target_transform.localPosition = stateAnimations[0].targetPosition;
-        } 
-        SnapToGrid();
+        }  
         transform.SetAsFirstSibling();
     }
         public virtual void ChangeCellType( io_base_cell_type _cell_type)
@@ -317,46 +440,24 @@ public class io_base : MonoBehaviour
             // Устанавливаем параметры новой клетки
             base_cell.floor = floor;
             base_cell.direction = newDirection; // Используем новое направление
-            
-            // Применяем направление к transform новой клетки
-            base_cell.direction = newDirection;
+             
             
             base_cell.AddStack(io_base.io_type.clicked);
             
-            // Добавляем новую клетку в список
-            io_system.instance.io_list.Add(base_cell);
+            // Добавляем новую клетку в матрицу
+            matrix.instance.cells[base_cell.grid_position[0],base_cell.floor,base_cell.grid_position[2]]=base_cell;
             
-            // Помечаем старую клетку на удаление и убираем из списка
-            this.stack.Clear();
+            // Помечаем старую клетку на удаление и убираем из матрицы 
             this.stack.Add(io_type.ToRemove);
             this.transform.parent = null;
-            this.name = base_cell.name + "_toRemove";
-            io_system.instance.io_list.Remove(this);
+            this.name = base_cell.name + "_toRemove"; 
             
             // Принудительно сохраняем корпус при изменении типа клетки
             SaveHullOnCellChange();
         }
         ;
     }
-    public void SnapToGrid()
-    {
-        transform.position = SnapToGrid(transform.position);
-    }
-  public Vector3 SnapToGrid(Vector3 _position)
-{
-    // Получаем текущую позицию объекта
-    
-
-    // Приводим позицию по осям X и Z к ближайшему кратному 0.5
-    _position.x = Mathf.Round(_position.x * 2) / 2f; // Округляем к ближайшему 0.5
-    _position.z = Mathf.Round(_position.z * 2) / 2f; // Округляем к ближайшему 0.5
-
-    // Приводим позицию по оси Y к ближайшему целому числу
-    _position.y = Mathf.Round(_position.y); // Округление до ближайшего целого
-
-    // Устанавливаем обновленную позицию
-    return _position;
-}
+   
     // Метод для принудительного сохранения при изменении клетки
     private void SaveHullOnCellChange()
     {
@@ -418,11 +519,9 @@ public class io_base : MonoBehaviour
         int target_x = Mathf.RoundToInt(new_x);
         int target_z = Mathf.RoundToInt(new_z);
 
-        return io_system.instance.io_list.FirstOrDefault(c =>
-            c.floor == floor &&
-            Mathf.RoundToInt(c.transform.position.x) == target_x &&
-            Mathf.RoundToInt(c.transform.position.z) == target_z
-        );
+        // Используем матрицу для поиска клетки
+        Vector3 targetPosition = new Vector3(target_x, floor, target_z);
+        return matrix.instance.GetCellAtPosition(targetPosition);
     }
     
     public int getDirection(io_base A, io_base B)
@@ -596,91 +695,5 @@ public class io_base : MonoBehaviour
         return 0; // Если ничего не найдено, возвращаем направление по умолчанию
     }
     // Update is called once per frame
-    void Update()
-    { 
-
-            // if (gameObject.name == "cell_wall_wall(Clone)")
-            // {
-            //     Debug.Log("cell_wall_wall(Clone)");
-            // }
-
-
-
-
-        // Обновляем анимацию вращения направления
-        var directionAnimation = GetComponent<io_base_transform_animation>();
-        if (directionAnimation != null)
-        {
-            directionAnimation.UpdateDirectionLerp();
-        }
-        
-        localTimer += Time.deltaTime;
-        if(stack.Count == 0 || stack==null) return;
-
-                if (stack.Last() == io_type.ToRemove)
-        {
-            var animSO = GetCurrentAnimationSO();
-            if (animSO != null && localTimer > animSO.duration)
-            {
-                Destroy(gameObject, (localTimer * localTimer % 1) / 3);
-                return;
-            }
-            else
-            {
-                 Destroy(gameObject);
-                return;
-            }
-            
-            // Если нет анимации ToRemove, уничтожаем сразу
-            if (animSO == null)
-            {
-                if (io_system.instance != null && io_system.instance.io_list != null)
-                {
-                    io_system.instance.io_list.Remove(this);
-                }
-                Destroy(gameObject);
-                return;
-            }
-        
-            // Выполняем анимацию исчезновения
-            float progress = localTimer / animSO.duration;
-            localTimer=Mathf.Clamp(localTimer, 0, 1);
-            target_transform.localScale = new Vector3(Mathf.Max(target_transform.localScale.x*animSO.curve.Evaluate(localTimer), 0.01f), Mathf.Max(target_transform.localScale.y*animSO.curve.Evaluate(localTimer), 0.01f), Mathf.Max(target_transform.localScale.z*animSO.curve.Evaluate(localTimer), 0.01f));
-            target_transform.localPosition = Vector3.Lerp(target_transform.localPosition, animSO.targetPosition, animSO.curve.Evaluate(localTimer));
-            target_transform.localRotation = Quaternion.Slerp(target_transform.localRotation, animSO.targetRotation, animSO.curve.Evaluate(localTimer));
-            
-            // Анимация цвета
-            for (int i = 0; i < target_mesh_renderer.Length; i++)
-            {
-                if (target_mesh_renderer[i] != null && target_mesh_renderer[i].material != null)
-                {
-                    target_mesh_renderer[i].material.color = Color.Lerp(target_mesh_renderer[i].material.color, animSO.targetColor, animSO.curve.Evaluate(progress));
-                    target_mesh_renderer[i].material.SetColor("_EmissionColor", Color32.Lerp(target_mesh_renderer[i].material.GetColor("_EmissionColor"), animSO.targetEmissionColor, animSO.curve.Evaluate(progress)));
-                }
-            }
-            return;
-        } 
-        var currentAnimSO = GetCurrentAnimationSO();
-        if (currentAnimSO == null) return;
-        target_transform.localScale = Vector3.Lerp(target_transform.localScale, currentAnimSO.targetScale, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.duration));
-        if(target_transform.localScale.magnitude<0.01f)
-        {
-            target_transform.localScale=new Vector3(0.01f,0.01f,0.01f);
-        }
-       
-        target_transform.localPosition = Vector3.Lerp(target_transform.localPosition, currentAnimSO.targetPosition, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.duration));
-            // Validate quaternions before interpolation to avoid assertion errors
-        Quaternion endRotation = Quaternion.Euler(0, direction * 90f, 0);   
-        target_transform.localRotation = Quaternion.Slerp(target_transform.localRotation, endRotation, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.duration));
-        // Анимация цвета
-        for (int i = 0; i < target_mesh_renderer.Length; i++)
-        {
-            if (target_mesh_renderer[i] != null && target_mesh_renderer[i].material != null)
-            {
-                target_mesh_renderer[i].material.color = Color.Lerp(target_mesh_renderer[i].material.color, currentAnimSO.targetColor, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.duration));
-                target_mesh_renderer[i].material.SetColor("_EmissionColor", Color32.Lerp(target_mesh_renderer[i].material.GetColor("_EmissionColor"), currentAnimSO.targetEmissionColor, currentAnimSO.curve.Evaluate(localTimer / currentAnimSO.duration)));
-            }
-        }
-    }
- 
+    
 }

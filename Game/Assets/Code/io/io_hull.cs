@@ -26,6 +26,7 @@ public class HullCellData
 [System.Serializable]
 public class HullData
 { 
+   
     // Основная информация о корпусе
     public string hull_name = "default hull 01";
     public HullType hull_type = HullType.default_type;
@@ -59,7 +60,7 @@ public enum HullType
 }
 
 public class io_hull : MonoBehaviour
-{
+{   public static io_hull instance;
     private const string HULL_SAVE_FILE = "last_hull.json";
     private const string HULL_SAVE_PATH = "HullSaves";
     private string saveFilePath => Path.Combine(Application.persistentDataPath, HULL_SAVE_PATH, HULL_SAVE_FILE);
@@ -71,6 +72,7 @@ public class io_hull : MonoBehaviour
     
     void Awake()
     {
+        instance = this;
         InitializeSavePath();
         // Загрузка теперь происходит в grid_cells.Awake()
         // StartCoroutine(LoadHullWithDelay()); // Убираем эту строку
@@ -188,7 +190,7 @@ public class io_hull : MonoBehaviour
         
         try
         {
-            HullData hullData = new HullData(GetGridSize());
+            HullData hullData = new HullData(25); // Используем фиксированный размер матрицы
             
             int savedCells = 0;
            
@@ -252,69 +254,89 @@ public class io_hull : MonoBehaviour
     
     public void LoadHullFromFile()
     {
+     
+    }
+    
+    // Методы для работы с matrix
+    public void LoadHullDataToMatrix(HullData hullData, matrix matrixSystem)
+    {
+        if (hullData == null || hullData.cells == null)
+        {
+            Debug.LogWarning("io_hull: HullData пуст или null");
+            return;
+        }
+        
+        if (matrixSystem == null)
+        {
+            Debug.LogError("io_hull: matrixSystem равен null");
+            return;
+        }
+        
+        // Очищаем матрицу
+        matrixSystem.ClearMatrix();
+        
+        // Загружаем клетки
+        foreach (var cellData in hullData.cells)
+        {
+            // Находим префаб для типа клетки
+            io_base prefabToUse = io_system.instance.cells_prefabs.Find(x => x.cell_type == cellData.cellType);
+            if (prefabToUse == null)
+            {
+                Debug.LogWarning($"io_hull: Не найден префаб для типа {cellData.cellType}");
+                continue;
+            }
+            
+            // Вычисляем позицию с учетом шага сетки
+            float gridStep = matrixSystem.GetGridStepForCell(prefabToUse);
+            Vector3 position = new Vector3(cellData.x * gridStep, cellData.floor * gridStep, cellData.z * gridStep);
+            
+            // Создаем клетку
+            io_base io = Instantiate(prefabToUse, position, Quaternion.identity);
+            io.floor = cellData.floor;
+            io.direction = cellData.direction;
+            io.target_transform.localRotation = Quaternion.Euler(0, cellData.direction * 90, 0);
+            io.Init(matrixSystem.transform);
+            
+            // Добавляем в матрицу
+            matrixSystem.AddCell(io);
+        }
+        
+        Debug.Log($"io_hull: Загружено {hullData.cells.Count} клеток в matrix");
+    }
+    
+    public bool LoadHullFromFileToMatrix(matrix matrixSystem)
+    {
+        if (matrixSystem == null)
+        {
+            Debug.LogError("io_hull: matrixSystem равен null");
+            return false;
+        }
+        
         if (!File.Exists(saveFilePath))
         {
-            if (debugMode)
-            {
-                Debug.Log("io_hull: Файл сохранения не найден, будет создана стандартная сетка");
-            }
-            return;
+            Debug.LogWarning("io_hull: Файл сохранения не найден");
+            return false;
         }
         
         try
         {
             string json = File.ReadAllText(saveFilePath);
-            if (string.IsNullOrEmpty(json))
-            {
-                Debug.LogWarning("io_hull: Файл сохранения пуст");
-                return;
-            }
-            
             HullData hullData = JsonUtility.FromJson<HullData>(json);
-            
-            if (hullData == null)
+            if (hullData != null && hullData.cells != null && hullData.cells.Count > 0)
             {
-                Debug.LogError("io_hull: Не удалось десериализовать данные корпуса");
-                return;
-            }
-            
-            if (hullData.cells == null)
-            {
-                Debug.LogWarning("io_hull: Данные корпуса не содержат клеток");
-                return;
-            }
-            
-            if (debugMode)
-            {
-                Debug.Log($"io_hull: Загружено {hullData.cells.Count} клеток из {saveFilePath}");
-            }
-            
-            // Передаем данные в grid_cells для загрузки
-            grid_cells gridCells = FindObjectOfType<grid_cells>();
-            if (gridCells != null)
-            {
-                gridCells.LoadHullData(hullData);
-            }
-            else
-            {
-                Debug.LogError("io_hull: grid_cells не найден на сцене");
+                LoadHullDataToMatrix(hullData, matrixSystem);
+                return true;
             }
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"io_hull: Ошибка загрузки: {e.Message}");
+            Debug.LogError($"io_hull: Ошибка загрузки файла: {e.Message}");
         }
+        
+        return false;
     }
     
-    private int GetGridSize()
-    {
-        grid_cells gridCells = FindObjectOfType<grid_cells>();
-        if (gridCells != null)
-        {
-            return gridCells.grid_size;
-        }
-        return 10; // Значение по умолчанию
-    }
+   
     
     [ContextMenu("Сохранить корпус")]
     public void SaveHull()

@@ -20,7 +20,8 @@ public class io_system : MonoBehaviour
         }
     }
     float base_delay = 1;
-    [SerializeField] public List<io_base> io_list = new List<io_base>();
+    [SerializeField] public List<io_base> io_list = new List<io_base>(); // Оставляем для совместимости, но будем использовать matrix
+    [SerializeField] private matrix matrixSystem; // Ссылка на matrix для работы с матрицей
     Camera main_camera
     {
         get
@@ -38,7 +39,7 @@ public class io_system : MonoBehaviour
     public mode current_mode = mode.edit;
 
     [SerializeField] public List<io_base> cells_prefabs = new List<io_base>();
-
+    public int current_floor=0;
 
     [Header("Настройки управления этажами")]
     [SerializeField] private float floorChangeCooldown = 0.5f; // Задержка между сменой этажей
@@ -48,15 +49,24 @@ public class io_system : MonoBehaviour
 
     private float lastFloorChangeTime = 0f; // Время последней смены этажа
     private Dictionary<io_base, Vector3> targetPositions = new Dictionary<io_base, Vector3>(); // Целевые позиции для lerp
+    private HashSet<int> floorsWithSpaceCells = new HashSet<int>(); // Этажи, на которых уже созданы клетки space
 
     // Переменная для оптимизации рейкастинга
     private Vector3 lastMousePosition = Vector3.zero; // Предыдущие координаты мыши
+    void Awake()
+    { 
+        
+    }
     void Update()
-    {
+    {  
+        if (change_cell_type()) return;
+        HandleFloorChange();
+        return;
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             current_mode = mode.create;
             create_cell.AddStack(io_base.io_type.on);
+
             clear_mouse_over();
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
@@ -68,11 +78,10 @@ public class io_system : MonoBehaviour
         {
             current_mode = mode.play;
         }
-        if (change_cell_type()) return;
-        HandleFloorChange();
+     
 
         // Применение плавного перемещения этажей
-        ApplyFloorLerp();
+     
 
         // Очищаем список от уничтоженных объектов
 
@@ -98,375 +107,160 @@ public class io_system : MonoBehaviour
 
     // Метод для очистки списка от уничтоженных объектов
 public void clear_mouse_over(){
-    foreach(var io in io_list){
+    var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+    foreach(var io in currentFloorCells){
         io.RemoveStack(io_base.io_type.mouseOver);
     }
 }
 
+    // Метод для получения выделенных клеток на текущем этаже
+    private List<io_base> GetSelectedCellsOnFloor()
+    {
+        return matrix.instance.GetSelectedCellsOnFloor(current_floor);
+    }
+    
+    // Метод для получения всех выделенных клеток (для совместимости)
+    private List<io_base> GetSelectedCells()
+    {
+        return GetSelectedCellsOnFloor();
+    }
+    
     // Метод для деселектирования всех объектов
     private void DeselectAllObjects()
     {
-        foreach (var io in io_list)
+        var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+        foreach (var io in currentFloorCells)
         {
             if (io.stack.Contains(io_base.io_type.clicked))
             {
                 io.AddStack(io_base.io_type.on);
             }
         }
-        Debug.Log("Все объекты деселектированы");
+        Debug.Log("Все объекты текущего этажа деселектированы");
     }
 
     bool change_cell_type()
     {
+        // Обработка изменения типа клеток
+        if (HandleCellTypeChange()) return true;
+        
+        // Обработка изменения направления
+        if (HandleDirectionChange()) return true;
+        
+        return false;
+    }
+    
+    // Метод для обработки изменения типа клеток
+    private bool HandleCellTypeChange()
+    {
+        var selectedCells = GetSelectedCellsOnFloor();
+        if (selectedCells.Count == 0) return false;
+        
+        bool cellTypeChanged = false;
+        
         if (Input.GetKeyDown(KeyCode.Z))
         {
-            // Создаем копию списка для безопасной итерации
-            var ioListCopy = GetSelectedCells();
-            foreach (var io in ioListCopy)
-            {
-                io.ChangeCellType(io_base.io_base_cell_type.stair);
-            }
-            // Деселектируем все объекты после смены типа
-            DeselectAllObjects();
-            return true;
+            ApplyCellTypeChange(selectedCells, io_base.io_base_cell_type.stair);
+            cellTypeChanged = true;
         }
-        if (Input.GetKeyDown(KeyCode.X))
+        else if (Input.GetKeyDown(KeyCode.X))
         {
-            // Создаем копию списка для безопасной итерации
-            var ioListCopy = GetSelectedCells();
-            foreach (var io in ioListCopy)
-            {
-                io.ChangeCellType(io_base.io_base_cell_type.space);
-            }
-            // Деселектируем все объекты после смены типа
-            DeselectAllObjects();
-            return true;
+            ApplyCellTypeChange(selectedCells, io_base.io_base_cell_type.space);
+            cellTypeChanged = true;
         }
-        if (Input.GetKeyDown(KeyCode.C))
+        else if (Input.GetKeyDown(KeyCode.C))
         {
-            // Создаем копию списка для безопасной итерации
-            var ioListCopy = GetSelectedCells();
-            foreach (var io in ioListCopy)
-            {
-                io.ChangeCellType(io_base.io_base_cell_type.cell);
-            }
-            // Деселектируем все объекты после смены типа
+            ApplyCellTypeChange(selectedCells, io_base.io_base_cell_type.cell);
+            cellTypeChanged = true;
+        }
+        
+        if (cellTypeChanged)
+        {
             DeselectAllObjects();
             return true;
         }
-
-        // Обработка изменения направления выделенных объектов
+        
+        return false;
+    }
+    
+    // Метод для применения изменения типа клеток
+    private void ApplyCellTypeChange(List<io_base> cells, io_base.io_base_cell_type newType)
+    {
+        foreach (var cell in cells)
+        {
+            cell.ChangeCellType(newType);
+        }
+    }
+    
+    // Метод для обработки изменения направления
+    private bool HandleDirectionChange()
+    {
+        var selectedCells = GetSelectedCellsOnFloor();
+        if (selectedCells.Count == 0) return false;
+        
         if (Input.GetKeyDown(KeyCode.Q))
         {
             Debug.Log("Клавиша Q нажата!");
-            // Поворот против часовой стрелки (-1)
-            var ioListCopy = GetSelectedCells();
-            Debug.Log($"Найдено выделенных объектов: {ioListCopy.Count}");
-            foreach (var io in ioListCopy)
-            {
-                Debug.Log($"Применяю поворот -1 к объекту: {io.name}");
-                io.direction--;
-                io.localTimer = 0.75f;
-            }
+            ApplyDirectionChange(selectedCells, -1);
             return true;
         }
-
+        
         if (Input.GetKeyDown(KeyCode.E))
         {
             Debug.Log("Клавиша E нажата!");
-            // Поворот по часовой стрелке (+1)
-            var ioListCopy = GetSelectedCells();
-            Debug.Log($"Найдено выделенных объектов: {ioListCopy.Count}");
-            foreach (var io in ioListCopy)
-            {
-                Debug.Log($"Применяю поворот +1 к объекту: {io.name}");
-                io.direction++;
-                io.localTimer = 0.75f;
-            }
+            ApplyDirectionChange(selectedCells, 1);
             return true;
         }
-
+        
         return false;
     }
-    // Метод для обработки изменения этажа обычным колесом мыши
-    // (не зажатым, в отличие от вращения камеры)
+    
+    // Метод для применения изменения направления
+    private void ApplyDirectionChange(List<io_base> cells, int directionDelta)
+    {
+        Debug.Log($"Найдено выделенных объектов: {cells.Count}");
+        foreach (var cell in cells)
+        {
+            Debug.Log($"Применяю поворот {directionDelta} к объекту: {cell.name}");
+            cell.direction += directionDelta;
+            cell.localTimer = 0.75f;
+        }
+    }
+    
+    public float floor_treshold=0.0f;
     private void HandleFloorChange()
     {
-        // Проверяем нажатие средней кнопки мыши для деселекта
-        if (Input.GetMouseButtonDown(2))
+        floor_treshold+=Time.deltaTime;
+
+        grid_control.Instance.transform.position=Vector3.Lerp(grid_control.Instance.transform.position,new Vector3(grid_control.Instance.transform.position.x,current_floor,grid_control.Instance.transform.position.z),Time.deltaTime*10);
+        
+        if (floor_treshold < 1.25f) return;
+        
+        float scrollInput = Input.GetAxis("Mouse ScrollWheel");
+
+        if (scrollInput > 0f)
         {
-            // Проверяем, попал ли клик по какому-либо объекту
-            bool hitSelectedObject = false;
-            io_base hitSelected = null;
-
-            RaycastHit hit;
-            if (Physics.Raycast(main_camera.ScreenPointToRay(Input.mousePosition), out hit, 1000, LayerMask.GetMask("io_base")))
-            {
-                foreach (var io in io_list)
-                {
-                    if (io.target_collider == hit.collider &&
-                        io.stack.Last() == io_base.io_type.clicked)
-                    {
-                        hitSelectedObject = true;
-                        hitSelected = io;
-                        break;
-                    }
-                }
-            }
-
-            if (hitSelectedObject)
-            {
-                hitSelected.AddStack(io_base.io_type.on);
-            }
-            else
-            {
-                // Если кликнули мимо выделенных объектов - снимаем выделение со всех
-                foreach (var io in io_list)
-                {
-                    io.AddStack(io_base.io_type.on);
-                }
-            }
+            if(current_floor==matrix.instance.size-1) return;
+            current_floor++;
+            floor_treshold = 0.0f;
+           matrix.instance.createFloor(current_floor);
         }
-
-        // Обработка колеса мыши для изменения этажа (только если не зажата средняя кнопка)
-        if (!Input.GetMouseButton(2))
+        else if (scrollInput < 0f)
         {
-            float scrollInput = Input.GetAxis("Mouse ScrollWheel");
-
-            if (scrollInput > 0f)
-            {
-                // Колесо вверх - поднимаем этаж
-                ChangeFloor(1);
-            }
-            else if (scrollInput < 0f)
-            {
-                // Колесо вниз - опускаем этаж
-                ChangeFloor(-1);
-            }
-        }
-    }
-
-    // Метод для применения плавного перемещения этажей
-    private void ApplyFloorLerp()
-    {
-        // Список клеток для удаления из словаря (которые достигли цели)
-        List<io_base> cellsToRemove = new List<io_base>();
-
-        foreach (var kvp in targetPositions)
-        {
-            io_base cell = kvp.Key;
-            Vector3 targetPosition = kvp.Value;
-
-            // Плавное перемещение к целевой позиции
-            Vector3 currentPosition = cell.transform.position;
-            Vector3 newPosition = Vector3.Lerp(currentPosition, targetPosition, floorLerpSpeed * Time.deltaTime);
-            cell.transform.position = newPosition;
-
-            // Обновляем поле floor в io_base при изменении позиции
-            int newFloor = Mathf.RoundToInt(newPosition.y);
-            if (cell.floor != newFloor)
-            {
-                cell.floor = newFloor;
-            }
-
-            // Проверяем, достигли ли мы цели (с небольшой погрешностью)
-            if (Vector3.Distance(newPosition, targetPosition) < 0.01f)
-            {
-                // Устанавливаем точную позицию и помечаем для удаления
-                cell.transform.position = targetPosition;
-                cell.floor = Mathf.RoundToInt(targetPosition.y);
-                cellsToRemove.Add(cell);
-            }
-        }
-
-        // Удаляем клетки, которые достигли цели
-        foreach (var cell in cellsToRemove)
-        {
-            targetPositions.Remove(cell);
-        }
-
-        // Если есть клетки, которые достигли цели, сохраняем корпус
-        if (cellsToRemove.Count > 0)
-        {
-            SaveHullOnFloorChange();
-        }
-    }
-    void Awake()
-    {
-
-    }
+            if(current_floor==0) return;
+            current_floor--;
+            floor_treshold = 0.0f;
+            matrix.instance.createFloor(current_floor);
+        }  
+    } 
+    
+    // Метод для создания клеток space на текущем этаже
+   
+        // Метод для создания одной клетки space
+   
 
 
-
-
-    // Метод для проверки наличия выбранных клеток
-    private bool HasSelectedCells()
-    {
-        foreach (var io in io_list)
-        {
-            if (io.stack.Contains(io_base.io_type.clicked))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // Метод для получения списка выбранных клеток
-    private List<io_base> GetSelectedCells()
-    {
-        List<io_base> selectedCells = new List<io_base>();
-        foreach (var io in io_list)
-        {
-            if (io.stack.Last() == io_base.io_type.clicked)
-            {
-                selectedCells.Add(io);
-            }
-            else
-             if (io.stack.Last() == io_base.io_type.mouseOver)
-            {
-                if (io.stack.Count > 1)
-                {
-                    if (io.stack[io.stack.Count - 2] == io_base.io_type.clicked)
-                    {
-                        selectedCells.Add(io);
-                    }
-                }
-            }
-        }
-        return selectedCells;
-    }
-
-    // Метод для изменения этажа выбранных клеток
-    private void ChangeFloor(int direction)
-    {
-        // Проверяем, есть ли выбранные клетки
-        if (!HasSelectedCells())
-        {
-            return;
-        }
-
-        // Проверяем задержку между сменами этажей
-        if (Time.time - lastFloorChangeTime < floorChangeCooldown)
-        {
-            return;
-        }
-
-        // Получаем выбранные клетки
-        List<io_base> selectedCells = GetSelectedCells();
-
-        // Проверяем, можно ли изменить этаж для всех клеток
-        bool canChange = true;
-        foreach (var cell in selectedCells)
-        {
-            int currentCellFloor = Mathf.RoundToInt(cell.transform.position.y);
-            int newFloor = currentCellFloor + direction;
-
-            if (newFloor < minFloor || newFloor > maxFloor)
-            {
-                canChange = false;
-                break;
-            }
-        }
-
-        if (!canChange)
-        {
-            return;
-        }
-
-        lastFloorChangeTime = Time.time;
-
-        // Устанавливаем целевые позиции для плавного перемещения
-        foreach (var cell in selectedCells)
-        {
-            Vector3 currentPosition = cell.transform.position;
-            int currentCellFloor = Mathf.RoundToInt(currentPosition.y);
-            Vector3 targetPosition = currentPosition;
-            targetPosition.y = currentCellFloor + direction; // Устанавливаем целевую высоту
-
-            targetPositions[cell] = targetPosition;
-        }
-
-        Debug.Log($"SHIP_CAMERA: Этаж изменен на {direction}. Затронуто клеток: {selectedCells.Count}");
-
-        // Принудительно сохраняем корпус при изменении этажа
-        SaveHullOnFloorChange();
-    }
-
-    // Метод для принудительного сохранения при изменении этажа
-    private void SaveHullOnFloorChange()
-    {
-        io_hull hull = FindObjectOfType<io_hull>();
-        if (hull != null)
-        {
-            hull.SaveHullToFile();
-        }
-    }
-
-    // Публичные методы для работы с этажами
-    public int GetCurrentFloor()
-    {
-        // Возвращаем средний этаж выбранных клеток
-        List<io_base> selectedCells = GetSelectedCells();
-        if (selectedCells.Count == 0)
-        {
-            return 0;
-        }
-
-        float totalFloor = 0f;
-        foreach (var cell in selectedCells)
-        {
-            totalFloor += cell.transform.position.y;
-        }
-
-        return Mathf.RoundToInt(totalFloor / selectedCells.Count);
-    }
-
-    public void SetFloor(int floor)
-    {
-        if (floor >= minFloor && floor <= maxFloor)
-        {
-            // Устанавливаем целевые позиции для всех выбранных клеток
-            List<io_base> selectedCells = GetSelectedCells();
-            foreach (var cell in selectedCells)
-            {
-                Vector3 currentPosition = cell.transform.position;
-                Vector3 targetPosition = currentPosition;
-                targetPosition.y = floor;
-                targetPositions[cell] = targetPosition;
-            }
-        }
-    }
-
-    public bool HasSelectedCellsPublic()
-    {
-        return HasSelectedCells();
-    }
-
-    public int GetSelectedCellsCount()
-    {
-        return GetSelectedCells().Count;
-    }
-
-    // Метод для получения информации о этажах выбранных клеток
-    public string GetSelectedCellsFloorInfo()
-    {
-        List<io_base> selectedCells = GetSelectedCells();
-        if (selectedCells.Count == 0)
-        {
-            return "Нет выбранных клеток";
-        }
-
-        var floorGroups = selectedCells.GroupBy(cell => Mathf.RoundToInt(cell.transform.position.y));
-        string info = $"Выбрано клеток: {selectedCells.Count}. Этажи: ";
-
-        foreach (var group in floorGroups.OrderBy(g => g.Key))
-        {
-            info += $"этаж {group.Key} ({group.Count()} клеток), ";
-        }
-
-        return info.TrimEnd(',', ' ');
-    }
+    
     void ModifyMode()
     {
         if (main_camera == null) return;
@@ -498,7 +292,8 @@ public void clear_mouse_over(){
 
             if (raycastHit)
             {
-                foreach (var io in io_list)
+                var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+                foreach (var io in currentFloorCells)
                 {
                     if (io.target_collider == hit.collider &&
                         io.stack[io.stack.Count - 2] == io_base.io_type.clicked)
@@ -518,7 +313,8 @@ public void clear_mouse_over(){
             else
             {
                 // Если кликнули мимо выделенных объектов - снимаем выделение со всех
-                foreach (var io in io_list)
+                var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+                foreach (var io in currentFloorCells)
                 {
 
                     io.AddStack(io_base.io_type.on);
@@ -532,7 +328,8 @@ public void clear_mouse_over(){
         {
             if (Input.GetMouseButton(0) || Input.GetMouseButtonDown(0))
             {
-                foreach (var io in io_list)
+                var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+                foreach (var io in currentFloorCells)
                 {
                     if (io.target_collider == hit.collider)
                     {
@@ -551,7 +348,8 @@ public void clear_mouse_over(){
             }
             else
             {
-                foreach (var io in io_list)
+                var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+                foreach (var io in currentFloorCells)
                 {
                     if (io.target_collider == hit.collider)
                     {
@@ -568,7 +366,8 @@ public void clear_mouse_over(){
         }
         else
         {
-            foreach (var io in io_list)
+            var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+            foreach (var io in currentFloorCells)
             {
                 if (io.stack.Count == 0) continue;
                 if (io.stack.Last() == io_base.io_type.mouseOver) io.RemoveStack(io_base.io_type.mouseOver);
@@ -613,7 +412,8 @@ public void clear_mouse_over(){
                 RaycastHit realhit=hit;
                 foreach (var hits in Physics.RaycastAll(main_camera.ScreenPointToRay(Input.mousePosition), 100, LayerMask.GetMask("io_base")))
                 {
-                    foreach (var cell in io_list)
+                    var currentFloorCells = matrix.instance.GetFloorCells(current_floor);
+                    foreach (var cell in currentFloorCells)
                     {
                         if (cell.target_collider == hits.collider)
                         {
@@ -693,16 +493,9 @@ public void clear_mouse_over(){
     }
 
     public io_base check_free_position_for_cell(Vector3 targetPositionCheck)        
-
     {        
-        foreach (var cell in io_list)
-        {
-            if ( Mathf.Abs(cell.transform.position.x- targetPositionCheck.x) < 0.1f && Mathf.Abs(cell.transform.position.z- targetPositionCheck.z) < 0.1f)
-            {
-                return cell;
-            }
-        }
-        return null;
+        // Используем матрицу для проверки позиции
+        return matrix.instance.GetCellAtPosition(targetPositionCheck);
     }
 
 
@@ -737,10 +530,10 @@ public void clear_mouse_over(){
             newCell.target_collider.enabled = true;
             // Инициализируем клетку
             newCell.Init(templateCell.transform.parent);
-            // Добавляем в список
-            if (instance.io_list != null)
+            // Добавляем в матрицу
+            if (instance.matrixSystem != null)
             {
-                instance.io_list.Add(newCell);
+                instance.matrixSystem.AddCell(newCell);
             }
 
             newCell.AddStack(io_base.io_type.on);

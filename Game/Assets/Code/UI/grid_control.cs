@@ -1,7 +1,9 @@
 using UnityEngine;
 
 public class grid_control : MonoBehaviour
-{
+{ 
+
+    public static grid_control Instance { get; private set; }
     [Header("Grid Shader Settings")]
     [SerializeField] private Material gridMaterial;
     [SerializeField] private bool useMouseFade = true;
@@ -17,13 +19,14 @@ public class grid_control : MonoBehaviour
     [SerializeField] private Color pulseColorAlt = Color.red;
     
     [Header("Mouse Settings")]
-    [SerializeField] private LayerMask groundLayerMask = -1;
+    [SerializeField] private LayerMask groundLayerMask = -1; // Все слои кроме io_base
     [SerializeField] private Camera targetCamera;
     [SerializeField] private bool clampMouseToScreen = true;
     [SerializeField] private float screenMargin = 0.1f; // Отступ от краев экрана (0.1 = 10%)
     
     private Vector3 mouseWorldPosition;
     private bool isMouseOverGround = false;
+    private LayerMask groundLayerMaskExcludingIOBase;
     
     // Property names for shader
     private static readonly int UseMouseFadeProperty = Shader.PropertyToID("_UseMouseFade");
@@ -39,7 +42,10 @@ public class grid_control : MonoBehaviour
     private static readonly int PulseColorAltProperty = Shader.PropertyToID("_PulseColorAlt");
     
     private Texture2D fadeCurveTexture;
-    
+    void Awake()
+    {
+        Instance = this;
+    }   
     void Start()
     {
         // Если материал не назначен, попробуем найти его на этом объекте
@@ -63,6 +69,10 @@ public class grid_control : MonoBehaviour
             Debug.Log("Using main camera: " + targetCamera.name);
 #endif
         }
+        
+        // Создаем LayerMask исключающий слой io_base
+        int ioBaseLayer = LayerMask.NameToLayer("io_base");
+        groundLayerMaskExcludingIOBase = groundLayerMask & ~(1 << ioBaseLayer);
         
 #if UNITY_EDITOR
         // Создаем текстуру для кривой затухания
@@ -100,7 +110,7 @@ public class grid_control : MonoBehaviour
         Ray ray = targetCamera.ScreenPointToRay(mouseScreenPosition);
         RaycastHit hit;
         
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayerMask))
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayerMaskExcludingIOBase))
         {
             mouseWorldPosition = hit.point;
             isMouseOverGround = true;
@@ -114,9 +124,16 @@ public class grid_control : MonoBehaviour
         else
         {
             // Если raycast не попал в землю, используем приблизительную позицию
+            // Используем высоту текущего этажа из io_system
+            float currentFloorHeight = 0f;
+            if (io_system.instance != null)
+            {
+                currentFloorHeight = io_system.instance.current_floor;
+            }
+            
             mouseScreenPosition.z = targetCamera.transform.position.y;
             mouseWorldPosition = targetCamera.ScreenToWorldPoint(mouseScreenPosition);
-            mouseWorldPosition.y = 0; // Устанавливаем Y в 0 для плоскости
+            mouseWorldPosition.y = currentFloorHeight; // Устанавливаем Y в высоту текущего этажа
             isMouseOverGround = false;
         }
     }

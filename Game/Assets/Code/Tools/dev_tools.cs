@@ -49,7 +49,7 @@ public class dev_tools : MonoBehaviour
         }
         
         // Статистика клеток по типам
-        DisplayCellStatistics();
+     
         
         // Информация о выбранном объекте
         DisplaySelectedObjectInfo();
@@ -58,23 +58,7 @@ public class dev_tools : MonoBehaviour
         DisplayMouseOverObjectInfo();
     }
     
-    void DisplayCellStatistics()
-    {
-        if (io_system.instance == null || io_system.instance.io_list == null) return;
-        
-        var cells = io_system.instance.io_list;
-        
-        // Дополнительная проверка на null для каждого элемента
-        int cellCount = cells.Count(io => io != null && io.cell_type == io_base.io_base_cell_type.cell);
-        int stairCount = cells.Count(io => io != null && io.cell_type == io_base.io_base_cell_type.stair);
-        int spaceCount = cells.Count(io => io != null && io.cell_type == io_base.io_base_cell_type.space);
-        int totalCount = cells.Count(io => io != null);
-        
-        string stats = $"Всего: {totalCount} (Пол: {cellCount}, Лестница: {stairCount}, Космос: {spaceCount})";
-        
-        GUI.Label(new Rect(10, 10, 1200, 100), "СТАТИСТИКА КЛЕТОК:", headerStyle);
-        GUI.Label(new Rect(10, 120, 1200, 100), stats, labelStyle);
-    }
+    
     
     void DisplaySelectedObjectInfo()
     {

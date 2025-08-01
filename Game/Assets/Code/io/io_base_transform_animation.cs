@@ -27,7 +27,7 @@ public class io_base_transform_animation : MonoBehaviour
     public Quaternion targetRotation => animationSettings != null ? animationSettings.targetRotation : Quaternion.identity;
     public Color targetColor => animationSettings != null ? animationSettings.targetColor : Color.white;
     public Color32 targetEmissionColor => animationSettings != null ? animationSettings.targetEmissionColor : Color.black;
-    public float duration => animationSettings != null ? animationSettings.duration : 0.5f;
+     
     
     // Метод для изменения направления
     public void ChangeDirection(int directionDelta)

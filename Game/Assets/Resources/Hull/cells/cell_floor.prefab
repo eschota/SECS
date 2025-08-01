@@ -53,11 +53,14 @@ MonoBehaviour:
   target_transform: {fileID: 8303325424800423388}
   target_collider: {fileID: 1102314825066542313}
   floor: 0
+  direction: 0
   target_mesh_renderer:
   - {fileID: 3992851257719217765}
+  cell_position_in_grid: {x: 0, y: 0, z: 0}
   desiredState: 1
   stateAnimations:
   - {fileID: 11400000, guid: b470420f5776cfd4c94e27b656a351dd, type: 2}
+  - {fileID: 11400000, guid: 8d51d98ef8f8de947b746645aab2e5a4, type: 2}
   - {fileID: 11400000, guid: 21cd04379fb983744b40b12aabb53dbc, type: 2}
   - {fileID: 11400000, guid: b0bf685086ab05d4e8595452d1ad11c1, type: 2}
   - {fileID: 11400000, guid: 8e87102be20845046a23442896903a27, type: 2}

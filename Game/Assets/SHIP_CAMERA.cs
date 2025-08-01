@@ -24,6 +24,9 @@ public class SHIP_CAMERA : MonoBehaviour
     [SerializeField] private float edgeScrollThreshold = 10f;
     [SerializeField] private float worldSizeX = 100f;
     [SerializeField] private float worldSizeZ = 100f;
+    [SerializeField] private float worldSizePerFloor = 20f; // Размер мира на этаж
+    [SerializeField] private float moveInertia = 0.9f; // Инерция движения (0-1)
+    [SerializeField] private float moveDeceleration = 0.95f; // Замедление движения
     
     [Header("Настройки высоты")]
     [SerializeField] private float minHeight = 10f;
@@ -34,6 +37,8 @@ public class SHIP_CAMERA : MonoBehaviour
     [SerializeField] private float rotationSpeed = 2f;
     [SerializeField] private float minRotationY = -30f;
     [SerializeField] private float maxRotationY = 60f;
+    [SerializeField] private float rotationInertia = 0.95f; // Инерция вращения (0-1)
+    [SerializeField] private float rotationDeceleration = 0.98f; // Замедление вращения
     
     [Header("Настройки плавности")]
     [SerializeField] private float smoothness = 5f;
@@ -57,6 +62,13 @@ public class SHIP_CAMERA : MonoBehaviour
     private bool isRotating = false;
     private Vector3 lastMousePosition;
     private Camera cameraComponent;
+    private float currentRotationVelocity = 0f; // Текущая скорость вращения
+    private float targetRotationVelocity = 0f; // Целевая скорость вращения
+    private Vector3 currentMoveVelocity = Vector3.zero; // Текущая скорость движения
+    private Vector3 targetMoveVelocity = Vector3.zero; // Целевая скорость движения
+    
+    // Флаг для сохранения исходного угла наклона
+    private bool isInitialized = false;
     
     // Переменные для режима freeze
     private Vector3 frozenPivotPosition;
@@ -99,48 +111,124 @@ public class SHIP_CAMERA : MonoBehaviour
             return;
         }
         
-        // Создание пивот-точки в координатах (0,0,0)
+        // Сохраняем исходные трансформы камеры (позиция 0,0,0 и поворот 70,45,0)
+        Vector3 initialCameraPosition = transform.position;
+        Quaternion initialCameraRotation = transform.rotation;
+        
+        Debug.Log($"SHIP_CAMERA: Исходные трансформы камеры - позиция: {initialCameraPosition}, поворот: {initialCameraRotation.eulerAngles}");
+        
+        // Создание пивот-точки с сохранением исходных трансформов камеры
         CreateCameraPivot();
+        
+        // Вычисляем центр матрицы на текущем этаже
+        Vector3 centerPosition = Vector3.zero;
+        if (io_system.instance != null)
+        {
+            centerPosition.y = io_system.instance.current_floor;
+        }
+        else
+        {
+            centerPosition.y = 0; // По умолчанию на нулевом этаже
+        }
+        
+        // Перемещаем пивот в центр матрицы, камера автоматически следует за ним
+        cameraPivot.transform.position = centerPosition;
         
         // Инициализация начальных значений
         targetPivotPosition = cameraPivot.transform.position;
-        targetHeight = transform.position.y;
-        targetRotationY = transform.eulerAngles.y;
-        targetAngleX = transform.eulerAngles.x;
-        startRotationX = transform.eulerAngles.x;
+        targetHeight = transform.localPosition.y;
+        targetRotationY = cameraPivot.transform.eulerAngles.y;
+        
+        // Сохраняем исходный угол наклона камеры (45 градусов)
+        targetAngleX = initialCameraRotation.eulerAngles.x;
+        startRotationX = initialCameraRotation.eulerAngles.x;
+        
+        Debug.Log($"SHIP_CAMERA: Сохранен исходный угол наклона X: {targetAngleX} градусов");
+        
+        // Устанавливаем флаг инициализации
+        isInitialized = true;
         
         // Установка начального FOV
         cameraComponent.fieldOfView = startFOV;
+        
+        Debug.Log($"SHIP_CAMERA: Пивот перемещен в центр матрицы на этаже {centerPosition.y}");
+        Debug.Log($"SHIP_CAMERA: Финальная позиция камеры: {transform.position}, поворот: {transform.rotation.eulerAngles}");
     }
 
     void Update()
     {
         HandleCameraTypeSwitch();
         HandleMouseRotation();
-        
+
         // Отключаем движение только если не вращаем камеру и не в режиме freeze
         if (!isRotating && !IsInFreezeMode())
         {
             HandleKeyboardInput();
             HandleMouseEdgeScrolling();
         }
-        
+        else
+        {
+            // Применяем замедление когда нет ввода
+            ApplyMoveDeceleration();
+        }
+
         ApplySmoothMovement();
         UpdatePivotRotation();
+        UpdateFloor();
     }
-    
+    private void UpdateFloor()
+    {
+        // Проверяем, есть ли доступ к io_system
+        if (io_system.instance == null) return;
+        
+        // Получаем текущий этаж
+        int currentFloor = io_system.instance.current_floor;
+        
+        // Вычисляем размер мира для текущего этажа
+        float currentWorldSizeX = worldSizeX + (currentFloor * worldSizePerFloor);
+        float currentWorldSizeZ = worldSizeZ + (currentFloor * worldSizePerFloor);
+        
+        // Обновляем позицию камеры по Y
+        Vector3 targetPosition = new Vector3(
+            cameraPivot.transform.position.x, 
+            currentFloor, 
+            cameraPivot.transform.position.z
+        );
+        
+        cameraPivot.transform.position = Vector3.Lerp(
+            cameraPivot.transform.position, 
+            targetPosition, 
+            Time.deltaTime * 10
+        );
+        
+        // Ограничиваем движение камеры в пределах мира для текущего этажа
+        Vector3 clampedPosition = cameraPivot.transform.position;
+        clampedPosition.x = Mathf.Clamp(clampedPosition.x, -currentWorldSizeX / 2f, currentWorldSizeX / 2f);
+        clampedPosition.z = Mathf.Clamp(clampedPosition.z, -currentWorldSizeZ / 2f, currentWorldSizeZ / 2f);
+        cameraPivot.transform.position = clampedPosition;
+        
+        // Обновляем targetPivotPosition чтобы избежать конфликтов
+        targetPivotPosition = cameraPivot.transform.position;
+    }
     private void CreateCameraPivot()
     {
         // Создание пивот-объекта
         cameraPivot = new GameObject("CameraPivot");
-        cameraPivot.transform.position = Vector3.zero;
+        
+        // Сохраняем исходные трансформы камеры
+        Vector3 worldPosition = transform.position;
+        Quaternion worldRotation = transform.rotation;
         
         // Делаем камеру дочерним объектом пивота
         transform.SetParent(cameraPivot.transform);
         
-        // Сохраняем локальную позицию камеры относительно пивота
-        Vector3 localPosition = transform.localPosition;
-        transform.localPosition = localPosition;
+        // Восстанавливаем исходные трансформы камеры
+        transform.position = worldPosition;
+        transform.rotation = worldRotation;
+        
+        Debug.Log($"SHIP_CAMERA: Создан пивот, камера сохранила исходные трансформы - позиция: {worldPosition}, поворот: {worldRotation.eulerAngles}");
+        
+        // Позиция пивота будет установлена в Start()
     }
     
     private void HandleKeyboardInput()
@@ -159,19 +247,35 @@ public class SHIP_CAMERA : MonoBehaviour
             input.Normalize();
         }
         
-        // Преобразование локального движения в мировые координаты относительно камеры
-        Vector3 movement = input * moveSpeed * Time.deltaTime;
+        // Вычисляем целевую скорость движения
+        Vector3 movement = input * moveSpeed;
         Vector3 worldMovement = transform.TransformDirection(movement);
         
         // Обнуляем Y-составляющую для движения только в горизонтальной плоскости
         worldMovement.y = 0f;
         
+        // Устанавливаем целевую скорость движения
+        targetMoveVelocity = worldMovement;
+        
+        // Применяем инерцию к скорости движения
+        currentMoveVelocity = Vector3.Lerp(currentMoveVelocity, targetMoveVelocity, 1f - moveInertia);
+        
         // Применение движения к позиции пивота
-        targetPivotPosition += worldMovement;
+        targetPivotPosition += currentMoveVelocity * Time.deltaTime;
+        
+        // Получаем текущие границы мира для этажа
+        float currentWorldSizeX = worldSizeX;
+        float currentWorldSizeZ = worldSizeZ;
+        if (io_system.instance != null)
+        {
+            int currentFloor = io_system.instance.current_floor;
+            currentWorldSizeX = worldSizeX + (currentFloor * worldSizePerFloor);
+            currentWorldSizeZ = worldSizeZ + (currentFloor * worldSizePerFloor);
+        }
         
         // Ограничение движения в пределах мира
-        targetPivotPosition.x = Mathf.Clamp(targetPivotPosition.x, -worldSizeX / 2f, worldSizeX / 2f);
-        targetPivotPosition.z = Mathf.Clamp(targetPivotPosition.z, -worldSizeZ / 2f, worldSizeZ / 2f);
+        targetPivotPosition.x = Mathf.Clamp(targetPivotPosition.x, -currentWorldSizeX / 2f, currentWorldSizeX / 2f);
+        targetPivotPosition.z = Mathf.Clamp(targetPivotPosition.z, -currentWorldSizeZ / 2f, currentWorldSizeZ / 2f);
     }
     
     private void HandleMouseEdgeScrolling()
@@ -207,7 +311,7 @@ public class SHIP_CAMERA : MonoBehaviour
         if (edgeMovement.magnitude > 0f)
         {
             edgeMovement.Normalize();
-            Vector3 movement = edgeMovement * moveSpeed * Time.deltaTime;
+            Vector3 movement = edgeMovement * moveSpeed;
             
             // Преобразование локального движения в мировые координаты относительно камеры
             Vector3 worldMovement = transform.TransformDirection(movement);
@@ -215,11 +319,27 @@ public class SHIP_CAMERA : MonoBehaviour
             // Обнуляем Y-составляющую для движения только в горизонтальной плоскости
             worldMovement.y = 0f;
             
-            targetPivotPosition += worldMovement;
+            // Добавляем к целевой скорости движения
+            targetMoveVelocity += worldMovement;
+            
+            // Применяем инерцию к скорости движения
+            currentMoveVelocity = Vector3.Lerp(currentMoveVelocity, targetMoveVelocity, 1f - moveInertia);
+            
+            targetPivotPosition += currentMoveVelocity * Time.deltaTime;
+            
+            // Получаем текущие границы мира для этажа
+            float currentWorldSizeX = worldSizeX;
+            float currentWorldSizeZ = worldSizeZ;
+            if (io_system.instance != null)
+            {
+                int currentFloor = io_system.instance.current_floor;
+                currentWorldSizeX = worldSizeX + (currentFloor * worldSizePerFloor);
+                currentWorldSizeZ = worldSizeZ + (currentFloor * worldSizePerFloor);
+            }
             
             // Ограничение движения в пределах мира
-            targetPivotPosition.x = Mathf.Clamp(targetPivotPosition.x, -worldSizeX / 2f, worldSizeX / 2f);
-            targetPivotPosition.z = Mathf.Clamp(targetPivotPosition.z, -worldSizeZ / 2f, worldSizeZ / 2f);
+            targetPivotPosition.x = Mathf.Clamp(targetPivotPosition.x, -currentWorldSizeX / 2f, currentWorldSizeX / 2f);
+            targetPivotPosition.z = Mathf.Clamp(targetPivotPosition.z, -currentWorldSizeZ / 2f, currentWorldSizeZ / 2f);
         }
     }
     
@@ -233,10 +353,27 @@ public class SHIP_CAMERA : MonoBehaviour
                mousePosition.y >= 0 && mousePosition.y <= Screen.height;
     }
     
+    // Метод для применения замедления движения
+    private void ApplyMoveDeceleration()
+    {
+        // Применяем замедление к скорости движения
+        currentMoveVelocity *= moveDeceleration;
+        targetMoveVelocity *= moveDeceleration;
+        
+        // Применяем оставшуюся скорость к позиции
+        targetPivotPosition += currentMoveVelocity * Time.deltaTime;
+        
+        // Останавливаем движение если скорость стала очень маленькой
+        if (currentMoveVelocity.magnitude < 0.1f)
+        {
+            currentMoveVelocity = Vector3.zero;
+            targetMoveVelocity = Vector3.zero;
+        }
+    }
+    
 
     
-    // Метод для вращения камеры и зума при зажатой средней кнопке мыши
-    // (в отличие от обычного колеса мыши, которое используется для смены этажей)
+    // Метод для вращения камеры при зажатой средней кнопке мыши
     private void HandleMouseRotation()
     {
         // Отключаем вращение в режиме freeze
@@ -247,6 +384,9 @@ public class SHIP_CAMERA : MonoBehaviour
         {
             isRotating = true;
             lastMousePosition = Input.mousePosition;
+            // Сбрасываем скорость при начале вращения
+            currentRotationVelocity = 0f;
+            targetRotationVelocity = 0f;
         }
         
         // Окончание вращения при отпускании средней кнопки мыши
@@ -259,22 +399,29 @@ public class SHIP_CAMERA : MonoBehaviour
         if (isRotating)
         {
             Vector3 mouseDelta = Input.mousePosition - lastMousePosition;
-            targetRotationY += mouseDelta.x * rotationSpeed * Time.deltaTime;
             
-            // Применяем вращение к пивоту, а не к камере
-            cameraPivot.transform.rotation = Quaternion.Euler(0f, targetRotationY, 0f);
+            // Вычисляем скорость вращения на основе движения мыши
+            float mouseRotationSpeed = mouseDelta.x * rotationSpeed;
+            targetRotationVelocity = mouseRotationSpeed;
+            
+            // Применяем инерцию к скорости вращения
+            currentRotationVelocity = Mathf.Lerp(currentRotationVelocity, targetRotationVelocity, 1f - rotationInertia);
+            
+            // Применяем вращение к целевому углу
+            targetRotationY += currentRotationVelocity * Time.deltaTime;
             
             lastMousePosition = Input.mousePosition;
         }
-        
-        // Обработка зума при зажатой средней кнопке мыши
-        if (Input.GetMouseButton(2))
+        else
         {
-            float scrollInput = Input.GetAxis("Mouse ScrollWheel");
-            if (scrollInput != 0f)
+            // Применяем замедление когда не вращаем
+            currentRotationVelocity *= rotationDeceleration;
+            targetRotationY += currentRotationVelocity * Time.deltaTime;
+            
+            // Останавливаем вращение если скорость стала очень маленькой
+            if (Mathf.Abs(currentRotationVelocity) < 0.1f)
             {
-                targetHeight -= scrollInput * heightChangeSpeed;
-                targetHeight = Mathf.Clamp(targetHeight, minHeight, maxHeight);
+                currentRotationVelocity = 0f;
             }
         }
     }
@@ -306,12 +453,9 @@ public class SHIP_CAMERA : MonoBehaviour
             // Обновление угла наклона и FOV в зависимости от высоты
             UpdateCameraAngleAndFOV();
             
-            // Плавное вращение пивота (если не вращаем мышью)
-            if (!isRotating)
-            {
-                Quaternion targetPivotRotation = Quaternion.Euler(0f, targetRotationY, 0f);
-                cameraPivot.transform.rotation = Quaternion.Lerp(cameraPivot.transform.rotation, targetPivotRotation, smoothness * Time.deltaTime);
-            }
+            // Плавное вращение пивота с учетом инерции
+            Quaternion targetPivotRotation = Quaternion.Euler(0f, targetRotationY, 0f);
+            cameraPivot.transform.rotation = Quaternion.Lerp(cameraPivot.transform.rotation, targetPivotRotation, smoothness * Time.deltaTime);
             
             // Плавная интерполяция угла наклона камеры
             Vector3 currentLocalRotation = transform.localEulerAngles;
@@ -328,9 +472,12 @@ public class SHIP_CAMERA : MonoBehaviour
         // Нормализация высоты для AnimationCurve (от 0 до 1)
         float heightNormalized = Mathf.InverseLerp(minHeight, maxHeight, currentHeight);
         
-        // Вычисление целевого угла наклона через AnimationCurve
-        float newTargetAngleX = heightToAngleCurve.Evaluate(heightNormalized);
-        targetAngleX = newTargetAngleX;
+        // Вычисление целевого угла наклона через AnimationCurve только после инициализации
+        if (isInitialized)
+        {
+            float newTargetAngleX = heightToAngleCurve.Evaluate(heightNormalized);
+            targetAngleX = newTargetAngleX;
+        }
         
         // Вычисление FOV через AnimationCurve
         float targetFOV = heightToFOVCurve.Evaluate(heightNormalized);
@@ -378,6 +525,50 @@ public class SHIP_CAMERA : MonoBehaviour
     public float GetCameraRotation()
     {
         return transform.eulerAngles.y;
+    }
+    
+    // Метод для получения текущих границ мира
+    public Vector2 GetCurrentWorldBounds()
+    {
+        float currentWorldSizeX = worldSizeX;
+        float currentWorldSizeZ = worldSizeZ;
+        
+        if (io_system.instance != null)
+        {
+            int currentFloor = io_system.instance.current_floor;
+            currentWorldSizeX = worldSizeX + (currentFloor * worldSizePerFloor);
+            currentWorldSizeZ = worldSizeZ + (currentFloor * worldSizePerFloor);
+        }
+        
+        return new Vector2(currentWorldSizeX, currentWorldSizeZ);
+    }
+    
+    // Метод для настройки параметров инерции вращения
+    public void SetRotationInertia(float inertia, float deceleration)
+    {
+        rotationInertia = Mathf.Clamp01(inertia);
+        rotationDeceleration = Mathf.Clamp01(deceleration);
+    }
+    
+    // Метод для остановки вращения
+    public void StopRotation()
+    {
+        currentRotationVelocity = 0f;
+        targetRotationVelocity = 0f;
+    }
+    
+    // Метод для настройки параметров инерции движения
+    public void SetMoveInertia(float inertia, float deceleration)
+    {
+        moveInertia = Mathf.Clamp01(inertia);
+        moveDeceleration = Mathf.Clamp01(deceleration);
+    }
+    
+    // Метод для остановки движения
+    public void StopMovement()
+    {
+        currentMoveVelocity = Vector3.zero;
+        targetMoveVelocity = Vector3.zero;
     }
     
     // Метод для получения текущего типа камеры (для отладки)

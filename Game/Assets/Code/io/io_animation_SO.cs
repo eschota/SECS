@@ -21,6 +21,5 @@ public class io_animation_SO : ScriptableObject
     public Color targetColor = Color.white;
     public Color32 targetEmissionColor = Color.black;
     
-    [Header("Animation Duration")]
-    public float duration = 0.5f;
+ 
 } 
