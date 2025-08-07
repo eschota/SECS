@@ -15,11 +15,12 @@ public class io_base : MonoBehaviour
         Selected = 5,
         Hovered = 6,
         Dragging = 7,
-        Placing = 8
+        Placing = 8,
+        Physics = 9,
+        PhysicsToTargetPositions = 10
     }
 
     public List<io_base_status> status_list = new List<io_base_status>();
-    public io_base_status status = io_base_status.None;
     [SerializeField] public int io_base_cell_type = 0;
     [SerializeField] public io_cell[] target_cells;
     [SerializeField] public Vector3 target_world_position;
@@ -29,9 +30,9 @@ public class io_base : MonoBehaviour
 
     [SerializeField] public Rigidbody targetRigidbody;
 
-    private io_base_SO currentStatusSO;
-    private io_base_SO previousStatusSO;
     private float statusTransitionTimer = 0f;
+    private Dictionary<Renderer, Material> cellMaterials = new Dictionary<Renderer, Material>();
+    private io_base_SO previousStatusSO;
 
     [SerializeField] private io_base_status _status = io_base_status.None;
     public io_base_status Status
@@ -43,14 +44,22 @@ public class io_base : MonoBehaviour
             {
                 previousStatusSO = GetStatusSO(_status);
                 _status = value;
-                currentStatusSO = GetStatusSO(_status);
                 status_list.Add(value);
                 statusTransitionTimer = 0f;
 
+                var currentStatusSO = GetStatusSO(_status);
                 if (currentStatusSO != null)
                 {
                     targetRigidbody.isKinematic = currentStatusSO.isKinematic;
-                    TurnColliders(currentStatusSO.isKinematic);
+                    TurnColliders(currentStatusSO.collidersEnabled);
+                    
+                    if (currentStatusSO.current_shader != null)
+                    {
+                        foreach (var entry in cellMaterials)
+                        {
+                            entry.Key.material.shader = currentStatusSO.current_shader;
+                        }
+                    }
                 }
             }
         }
@@ -64,11 +73,15 @@ public class io_base : MonoBehaviour
         {
             Creator.instance.cells.Remove(this);
         }
+        foreach (var material in cellMaterials.Values)
+        {
+            Destroy(material);
+        }
     }
 
     void OnValidate()
     {
-        target_cells = GetComponentsInChildren<io_cell>();
+        target_cells = GetComponentsInChildren<io_cell>().OrderBy(c => c.name).ToArray();
         status_definitions.Clear();
         status_definitions = Resources.LoadAll<io_base_SO>("Statuses").OrderBy(s => s.name).ToList();
         if (status_definitions.Count == 0)
@@ -79,21 +92,32 @@ public class io_base : MonoBehaviour
 
     void Awake()
     {
-        currentStatusSO = GetStatusSO(status);
-        if (currentStatusSO == null)
+        if (targetRigidbody == null) targetRigidbody = GetComponent<Rigidbody>();
+
+        foreach (var cell in target_cells)
         {
-             Debug.LogError($"Initial status '{status}' could not find a corresponding ScriptableObject. Check your Resources/Statuses folder.", this);
-             return;
+            var renderer = cell.GetComponent<Renderer>();
+            if (renderer != null && !cellMaterials.ContainsKey(renderer))
+            {
+                cellMaterials.Add(renderer, renderer.material);
+            }
         }
-        previousStatusSO = currentStatusSO;
-        _status = status;
+        
+        previousStatusSO = GetStatusSO(_status);
+        if (previousStatusSO == null)
+        {
+            Debug.LogError($"Initial status '{_status}' could not find a corresponding ScriptableObject.", this);
+        }
     }
 
     void Update()
     {
         localTimer += Time.deltaTime;
 
+        var currentStatusSO = GetStatusSO(Status);
         if (currentStatusSO == null || previousStatusSO == null) return;
+        
+        if(targetRigidbody.isKinematic == false) return;
 
         float transitionDuration = currentStatusSO.transitionCurve.keys.Length > 1 ? currentStatusSO.transitionCurve.keys.Last().time : 1f;
         statusTransitionTimer += Time.deltaTime;
@@ -132,23 +156,41 @@ public class io_base : MonoBehaviour
             {
                 UpdatePulse(ref finalPosition, ref finalScale, ref finalRotation, currentStatusSO);
             }
-
-            cell.transform.localPosition = finalPosition;
-            cell.transform.localRotation = finalRotation;
-            cell.transform.localScale = finalScale;
+            // ВАЖНО НЕ ТРОГАЙ ЭТОТ КОД!!!
+            cell.transform.localPosition = Vector3.Lerp(cell.transform.localPosition, cell.target_local_position, curveValue);
+            cell.transform.localRotation = Quaternion.Lerp(cell.transform.localRotation, cell.target_local_rotation, curveValue);
+            cell.transform.localScale = Vector3.Lerp(cell.transform.localScale, Vector3.one, curveValue);
 
             var renderer = cell.GetComponent<Renderer>();
-            if (renderer != null)
+            if (renderer != null && cellMaterials.TryGetValue(renderer, out Material mat))
             {
                 Color finalBaseColor = diffuseColor;
                 finalBaseColor.a = transparency;
                 
-                renderer.material.SetColor("_BaseColor", finalBaseColor);
-                renderer.material.SetColor("_EmissionColor", diffuseColor * emissive);
-                renderer.material.SetFloat("_WireframeToggle", wireframeToggle);
-                renderer.material.SetColor("_WireframeColor", wireframeColor);
-                renderer.material.SetFloat("_WireframeThickness", wireframeThickness);
-                renderer.material.SetFloat("_Smoothness", smoothness);
+                mat.SetColor("_BaseColor", finalBaseColor);
+                mat.SetColor("_EmissionColor", diffuseColor * emissive);
+                mat.SetFloat("_WireframeToggle", wireframeToggle);
+                mat.SetColor("_WireframeColor", wireframeColor);
+                mat.SetFloat("_WireframeThickness", wireframeThickness);
+                mat.SetFloat("_Smoothness", smoothness);
+            }
+        }
+    }
+
+    void FixedUpdate()
+    {
+        io_base_SO currentStatusSO = GetStatusSO(Status);
+        if (currentStatusSO != null && !targetRigidbody.isKinematic)
+        {
+            if (currentStatusSO.gravityVector != Vector3.zero)
+            {
+                targetRigidbody.AddForce(currentStatusSO.gravityVector, currentStatusSO.gravityForceMode);
+            }
+
+            if (currentStatusSO.forceToTargetPosition > 0)
+            {
+                Vector3 directionToTarget = target_world_position - targetRigidbody.worldCenterOfMass;
+                targetRigidbody.AddForce(directionToTarget.normalized * currentStatusSO.forceToTargetPosition, currentStatusSO.targetPositionForceMode);
             }
         }
     }
@@ -177,7 +219,9 @@ public class io_base : MonoBehaviour
         foreach (var cell in target_cells)
         {
             if (cell.target_collider != null)
+            {
                 cell.target_collider.enabled = value;
+            }
         }
     }
 }

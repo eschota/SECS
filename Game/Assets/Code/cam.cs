@@ -13,6 +13,7 @@ public class cam : MonoBehaviour
     public float maxZoomDistance = 2f;   // 200% от начального расстояния
     public float minFov = 6.3f;
     public float maxFov = 90f;
+    public float verticalMoveDelay = 0.1f;
 
     private GameObject cameraPivot;
     private Vector3 initialCameraLocalPosition;
@@ -24,6 +25,7 @@ public class cam : MonoBehaviour
     private bool isInitialized = false;
     private float baseFov;
     private float targetFov;
+    private float verticalMoveTimer = 0f;
     
     void Awake()
     {
@@ -83,6 +85,31 @@ public class cam : MonoBehaviour
             Vector3 movement = (forward * input.z + right * input.x) * movementSpeed * Time.deltaTime;
             target_pivot_position += movement;
         }
+
+        if (Input.GetKey(KeyCode.E))
+        {
+            verticalMoveTimer -= Time.deltaTime;
+            if (verticalMoveTimer <= 0)
+            {
+                target_pivot_position.y += 1;
+                verticalMoveTimer = verticalMoveDelay;
+            }
+        }
+        else if (Input.GetKey(KeyCode.Q))
+        {
+            verticalMoveTimer -= Time.deltaTime;
+            if (verticalMoveTimer <= 0)
+            {
+                target_pivot_position.y -= 1;
+                verticalMoveTimer = verticalMoveDelay;
+            }
+        }
+        else
+        {
+            verticalMoveTimer = 0;
+        }
+
+        target_pivot_position.y = Mathf.Clamp(Mathf.Round(target_pivot_position.y), 0f, 100f);
     }
     
     void HandleRotation()

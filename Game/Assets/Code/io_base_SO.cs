@@ -8,6 +8,13 @@ public class io_base_SO : ScriptableObject
     public Quaternion targetLocalRotation = Quaternion.identity;
     public Vector3 targetLocalScale = Vector3.one;
     
+    // Physics & Collider properties
+    public bool collidersEnabled = true;
+    public Vector3 gravityVector = Vector3.zero;
+    public ForceMode gravityForceMode = ForceMode.Force;
+    public float forceToTargetPosition = 0f;
+    public ForceMode targetPositionForceMode = ForceMode.Force;
+
     // Pulse properties
     public bool targetPulse = false;
     public float pulseSpeed = 1f;
@@ -16,6 +23,7 @@ public class io_base_SO : ScriptableObject
     public Quaternion targetPulseLocalRotation = Quaternion.identity;
     
     // Material & Shader properties
+    public Shader current_shader;
     [ColorUsage(true, true)] public Color targetDiffuseColor = Color.white;
     public float selfEmissive = 0f;
     public float transparency = 1f;

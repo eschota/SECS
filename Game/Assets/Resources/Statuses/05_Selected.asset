@@ -10,17 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5bdeb3330ac822e4da59c3bd1b886bab, type: 3}
-  m_Name: 3_Moving
+  m_Name: 05_Selected
   m_EditorClassIdentifier: 
-  isKinematic: 0
+  isKinematic: 1
   targetLocalPosition: {x: 0, y: 0, z: 0}
   targetLocalRotation: {x: 0, y: 0, z: 0, w: 1}
   targetLocalScale: {x: 1, y: 1, z: 1}
+  collidersEnabled: 0
+  gravityVector: {x: 0, y: 0, z: 0}
+  gravityForceMode: 0
+  forceToTargetPosition: 0
+  targetPositionForceMode: 0
   targetPulse: 0
   pulseSpeed: 1
   targetPulseLocalScale: {x: 1, y: 1, z: 1}
   targetPulseLocalPosition: {x: 0, y: 0, z: 0}
   targetPulseLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  current_shader: {fileID: 4800000, guid: a002323fa2129914ab5530a08e1506da, type: 3}
   targetDiffuseColor: {r: 0, g: 0, b: 0, a: 1}
   selfEmissive: 0
   transparency: 1

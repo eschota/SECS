@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
-using TMPro.EditorUtilities;
+
 
 public class Creator : MonoBehaviour
 {
@@ -51,10 +51,10 @@ public class Creator : MonoBehaviour
                 var a = Instantiate(prefabs[current_prefab_index], transform);
                 _current_prefab = a;
                 _current_prefab.transform.position = current_prefab_position;
-                _current_prefab.name = "Current Create";
-                _current_prefab.TurnColliders(false);
+                _current_prefab.name = "Current Create"; 
                 // Убеждаемся, что текущий префаб остается в иерархии Creator
                 _current_prefab.transform.SetParent(transform);
+                _current_prefab.Status = io_base.io_base_status.Creating;
                 cells.Add(_current_prefab);
             }
             return _current_prefab;
@@ -91,10 +91,8 @@ public class Creator : MonoBehaviour
                 current_prefab.transform.SetParent(transform); 
 
                 // Смещаем пивот к точке создания клетки
-                _cam.target_pivot_position = current_prefab.transform.position;
-                current_prefab.TurnColliders(true); 
-                current_prefab.targetRigidbody.isKinematic = true;           
-                
+                _cam.target_pivot_position = current_prefab.transform.position;         
+                current_prefab.Status = io_base.io_base_status.Placing;
                 current_prefab = null;
             }
         }
@@ -201,6 +199,7 @@ void PlacePrefabs()
         {
             var new_prefab = Instantiate(prefab, transform);  
             cells.Add(new_prefab);
+            new_prefab.Status = io_base.io_base_status.Placing;
             return;
         }       
     }
