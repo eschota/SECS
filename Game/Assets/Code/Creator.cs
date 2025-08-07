@@ -85,7 +85,6 @@ public class Creator : MonoBehaviour
             // Создание клетки при нажатии
             if (current_prefab != null)
             {
-                current_prefab.speed = 10;
                 AllActions?.Invoke(ActionType.Create, current_prefab);
 
                 // Убеждаемся, что клетка остается в иерархии Creator, а не попадает в пивот
@@ -144,7 +143,6 @@ public class Creator : MonoBehaviour
                 // snap to 90 degrees
                 current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
 
-                current_prefab.speed = 20;
             }
             else
             {

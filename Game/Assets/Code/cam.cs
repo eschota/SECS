@@ -11,7 +11,9 @@ public class cam : MonoBehaviour
     public float zoomSpeed = 2f;
     public float minZoomDistance = 0.3f; // 30% от начального расстояния
     public float maxZoomDistance = 2f;   // 200% от начального расстояния
-    
+    public float minFov = 6.3f;
+    public float maxFov = 90f;
+
     private GameObject cameraPivot;
     private Vector3 initialCameraLocalPosition;
     private Quaternion initialCameraLocalRotation;
@@ -20,10 +22,14 @@ public class cam : MonoBehaviour
     private float initialDistanceToPivot;
     private float currentDistanceToPivot;
     private bool isInitialized = false;
+    private float baseFov;
+    private float targetFov;
     
     void Awake()
     {
         _cam = Camera.main;
+        baseFov = _cam.fieldOfView;
+        targetFov = baseFov;
         CreatePivot();
         SetupCameraToFirstCell();
     }
@@ -41,8 +47,10 @@ public class cam : MonoBehaviour
             HandleMovement();
             HandleRotation();
             HandleZoom();
+            HandleFocus();
             
             cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target_pivot_position, Time.deltaTime * speed);
+            _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, targetFov, Time.deltaTime * speed);
         }
     }
 
@@ -80,22 +88,33 @@ public class cam : MonoBehaviour
     void HandleRotation()
     {
         if (!isInitialized) return;
-        
+
         if (Input.GetMouseButton(1)) // Правая кнопка мыши
         {
             float mouseX = Input.GetAxis("Mouse X") * rotationSpeed;
             float mouseY = Input.GetAxis("Mouse Y") * rotationSpeed;
-            
-            // Поворачиваем камеру вокруг пивота
-            _cam.transform.RotateAround(cameraPivot.transform.position, Vector3.up, mouseX);
-            _cam.transform.RotateAround(cameraPivot.transform.position, _cam.transform.right, -mouseY);
-            
-            // Ограничиваем вертикальный поворот
+
+            // Текущие углы Эйлера
             Vector3 eulerAngles = _cam.transform.eulerAngles;
-            if (eulerAngles.x > 180f)
-                eulerAngles.x -= 360f;
-            eulerAngles.x = Mathf.Clamp(eulerAngles.x, -80f, 80f);
-            _cam.transform.eulerAngles = eulerAngles;
+
+            // Преобразуем угол X в диапазон [-180, 180]
+            float currentX = eulerAngles.x;
+            if (currentX > 180f)
+            {
+                currentX -= 360f;
+            }
+
+            // Вычисляем новый угол по вертикали и ограничиваем его
+            float newX = Mathf.Clamp(currentX - mouseY, -70f, 70f);
+
+            // Вычисляем новый угол по горизонтали
+            float newY = eulerAngles.y + mouseX;
+
+            // Устанавливаем новый поворот
+            _cam.transform.rotation = Quaternion.Euler(newX, newY, 0);
+
+            // Устанавливаем позицию камеры относительно пивота
+            _cam.transform.position = cameraPivot.transform.position - _cam.transform.forward * initialDistanceToPivot;
         }
     }
     
@@ -106,24 +125,48 @@ public class cam : MonoBehaviour
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (Mathf.Abs(scroll) > 0.01f)
         {
-            // Изменяем локальную позицию камеры в процентах от базовой
-            Vector3 zoomOffset = baseLocalPosition * scroll * zoomSpeed;
-            Vector3 newLocalPosition = _cam.transform.localPosition + zoomOffset;
-            
-            // Ограничиваем зум в процентах от базовой позиции
-            float distanceMultiplier = 1f + scroll * zoomSpeed;
-            distanceMultiplier = Mathf.Clamp(distanceMultiplier, minZoomDistance, maxZoomDistance);
-            
-            // Применяем зум к базовой позиции
-            _cam.transform.localPosition = baseLocalPosition * distanceMultiplier;
-            
-            Debug.Log($"Zoom: {distanceMultiplier:F2}x, Local position: {_cam.transform.localPosition}");
+            targetFov -= scroll * zoomSpeed * 30f; // Умножаем на 30 для более заметного эффекта
+            targetFov = Mathf.Clamp(targetFov, minFov, maxFov);
         }
     }
 
-    void CreatePivot()
+    void HandleFocus()
     {
-        cameraPivot = new GameObject("CameraPivot");
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            Creator creator = FindObjectOfType<Creator>();
+            if (creator != null && creator.cells.Count > 0)
+            {
+                Vector3 averagePosition = Vector3.zero;
+                foreach (var cell in creator.cells)
+                {
+                    averagePosition += cell.transform.position;
+                }
+                averagePosition /= creator.cells.Count;
+
+                io_base closestCell = null;
+                float minDistance = float.MaxValue;
+                foreach (var cell in creator.cells)
+                {
+                    float distance = Vector3.Distance(cell.transform.position, averagePosition);
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        closestCell = cell;
+                    }
+                }
+
+                if (closestCell != null)
+                {
+                    target_pivot_position = closestCell.transform.position;
+                }
+            }
+        }
+    }
+   
+     void CreatePivot()
+     {
+         cameraPivot = new GameObject("CameraPivot");
         cameraPivot.transform.parent = null;
         
         // Сохраняем начальную позицию и поворот камеры относительно мира
