@@ -23,10 +23,10 @@ MonoBehaviour:
   targetPositionForceMode: 0
   targetPulse: 0
   pulseSpeed: 1
-  targetPulseLocalScale: {x: 1, y: 1, z: 1}
+  targetPulseLocalScale: {x: 1, y: 6.14, z: 1}
   targetPulseLocalPosition: {x: 0, y: 0, z: 0}
   targetPulseLocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  current_shader: {fileID: 4800000, guid: 4f0a7479213c44d4a90b53bf43be6b55, type: 3}
+  current_shader: {fileID: 4800000, guid: e27d9ac146597684d8ffa378cf53ccf0, type: 3}
   targetDiffuseColor: {r: 0.61960787, g: 0.627451, b: 0.6313726, a: 1}
   selfEmissive: 0
   transparency: 1

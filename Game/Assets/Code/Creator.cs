@@ -39,6 +39,10 @@ public class Creator : MonoBehaviour
     [SerializeField] public cam _cam;
     [SerializeField] public Play _play;
     public List<io_base> cells = new List<io_base>();
+    [SerializeField] private List<Shader> _shaders = new List<Shader>();
+    [SerializeField] private List<io_base> _prefabs = new List<io_base>();
+    [SerializeField] private List<io_base_SO> _statuses = new List<io_base_SO>();
+    [SerializeField] private List<Material> _materials = new List<Material>();
     public bool SnapGrid = true;
     private io_base _current_prefab;
     public int current_prefab_index = 0;
@@ -203,4 +207,61 @@ void PlacePrefabs()
             return;
         }       
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        _shaders.Clear();
+        var shaders_in_folder = Resources.LoadAll<Shader>("Shaders");
+        if (_shaders.Count != shaders_in_folder.Length)
+        {
+            foreach (var shader in shaders_in_folder)
+            {
+                if (!_shaders.Contains(shader))
+                {
+                    _shaders.Add(shader);
+                }
+            }
+        }
+
+        _prefabs.Clear();
+        var prefabs_in_folder = Resources.LoadAll<io_base>("Create");
+        if (_prefabs.Count != prefabs_in_folder.Length)
+        {
+            foreach (var prefab in prefabs_in_folder)
+            {
+                if (!_prefabs.Contains(prefab))
+                {
+                    _prefabs.Add(prefab);
+                }
+            }
+        }
+
+        _statuses.Clear();
+        var statuses_in_folder = Resources.LoadAll<io_base_SO>("Statuses");
+        if (_statuses.Count != statuses_in_folder.Length)
+        {
+            foreach (var status in statuses_in_folder)
+            {
+                if (!_statuses.Contains(status))
+                {
+                    _statuses.Add(status);
+                }
+            }
+        }
+        
+        _materials.Clear();
+        var materials_in_folder = Resources.LoadAll<Material>("mats");
+        if (_materials.Count != materials_in_folder.Length)
+        {
+            foreach (var material in materials_in_folder)
+            {
+                if (!_materials.Contains(material))
+                {
+                    _materials.Add(material);
+                }
+            }
+        }
+    }
+#endif
 }

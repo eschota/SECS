@@ -13,21 +13,21 @@ MonoBehaviour:
   m_Name: 01_Creating
   m_EditorClassIdentifier: 
   isKinematic: 1
-  targetLocalPosition: {x: -0.37, y: 1.59, z: 0}
-  targetLocalRotation: {x: -0.01203796, y: 0.02739642, z: -0.00032994477, w: -0.9995521}
-  targetLocalScale: {x: 0.75, y: -0.32, z: 0.05}
+  targetLocalPosition: {x: 0, y: 0.66, z: 0}
+  targetLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  targetLocalScale: {x: 0.9, y: 0.9, z: 0.9}
   collidersEnabled: 0
   gravityVector: {x: 0, y: 0, z: 0}
   gravityForceMode: 0
   forceToTargetPosition: 0
   targetPositionForceMode: 0
-  targetPulse: 1
-  pulseSpeed: 19.2
-  targetPulseLocalScale: {x: 1, y: 1.2, z: 1}
+  targetPulse: 0
+  pulseSpeed: 55
+  targetPulseLocalScale: {x: 1, y: 1, z: 1}
   targetPulseLocalPosition: {x: 0, y: 1, z: 0}
-  targetPulseLocalRotation: {x: 0.12940955, y: -0.01703709, z: 0.12940954, w: 0.98296297}
-  current_shader: {fileID: 4800000, guid: a002323fa2129914ab5530a08e1506da, type: 3}
-  targetDiffuseColor: {r: 1, g: 0.5677953, b: 0, a: 1}
+  targetPulseLocalRotation: {x: 0.043619387, y: 0, z: 0, w: 0.99904823}
+  current_shader: {fileID: 4800000, guid: e27d9ac146597684d8ffa378cf53ccf0, type: 3}
+  targetDiffuseColor: {r: 8.574187, g: 4.868383, b: 0, a: 1}
   selfEmissive: 0.53
   transparency: 0.2
   wireframeToggle: 1

@@ -26,7 +26,7 @@ MonoBehaviour:
   targetPulseLocalScale: {x: 1, y: 1, z: 1}
   targetPulseLocalPosition: {x: 0, y: 0, z: 0}
   targetPulseLocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  current_shader: {fileID: 4800000, guid: a002323fa2129914ab5530a08e1506da, type: 3}
+  current_shader: {fileID: 4800000, guid: e27d9ac146597684d8ffa378cf53ccf0, type: 3}
   targetDiffuseColor: {r: 0, g: 0, b: 0, a: 1}
   selfEmissive: 0
   transparency: 1
