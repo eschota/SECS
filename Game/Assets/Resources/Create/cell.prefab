@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5110713563624422485}
   - component: {fileID: 4706144106642954781}
   - component: {fileID: 5863668223384983802}
+  - component: {fileID: -3543465441684289404}
   m_Layer: 6
   m_Name: cell
   m_TagString: Untagged
@@ -55,7 +56,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   status_list: 
-  status: 0
   io_base_cell_type: 0
   target_cells:
   - {fileID: 180171793037360650}
@@ -71,8 +71,28 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fdc58a4e88204c14c8114e762831fcbf, type: 2}
   - {fileID: 11400000, guid: ea1bbd586f514844e840ab6b08c00e05, type: 2}
   - {fileID: 11400000, guid: df2d03b08ab08fe45a0a3ba9450a772e, type: 2}
+  - {fileID: 11400000, guid: 9ca4486b7708e3748b261869523e2a14, type: 2}
+  - {fileID: 11400000, guid: ee54cade5c8643e42bb1cb78fed90615, type: 2}
   targetRigidbody: {fileID: 6959628718673731917}
   _status: 0
+--- !u!114 &-3543465441684289404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1826940032870503286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 4081518212
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &6398392419181108641
 GameObject:
   m_ObjectHideFlags: 0

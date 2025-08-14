@@ -1,48 +1,42 @@
-using UnityEngine;
-using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
+using UnityEngine; 
 using System.Collections.Generic;
+using System;
 
 public class Play : MonoBehaviour
 {
-    public enum GameState
+    public enum State
     {
-        stateCreate,
-        stateSimulatePlay
+        Start,
+        Create,
+        SimulateLocal,
+        SimulateOnline
     }
     
     [SerializeField] public Camera _cam;
     [SerializeField] public Creator _creator;
     
-    public GameState currentState = GameState.stateCreate;
+    public State currentState = State.Create;
+
+    public static event Action<State> OnPlayStateChange;
     private bool isSimulationActive = false;
-    
-    // Сетевые компоненты
-    private NetworkManager networkManager;
-    // The type or namespace name 'NetworkObjectSpawner' could not be found, commenting out.
-    // private NetworkObjectSpawner spawner;
-    // The type or namespace name 'NetworkPlayerManager' could not be found, commenting out.
-    // private NetworkPlayerManager playerManager;
-    
-    // Таймер для предотвращения быстрой смены состояний
+ 
     private float localTimer = 0f;
     private float localThreshold = 0.5f;
-    
+    public static Play i;
     void Awake()
     {
+        i = this;
         // Получаем ссылки на камеру и Creator
         _cam = Camera.main;
         _creator = FindObjectOfType<Creator>();
         
-        // Инициализируем сетевые компоненты
-        InitializeNetworkComponents();
+        // Инициализируем сетевые компоненты 
     }
 
     void Update()
     {
         localTimer += Time.deltaTime;
-        SimulaterPlay();
-        HandleNetworkInputs();
+        SimulaterPlay(); 
         HandleStatusChange();
     }
     
@@ -52,149 +46,31 @@ public class Play : MonoBehaviour
         {
             localTimer = 0f; // Сбрасываем таймер
             
-            if (currentState == GameState.stateCreate)
+            if (currentState == State.Create)
             {
                 // Переключаемся в режим симуляции
-                currentState = GameState.stateSimulatePlay;
-                CreateHull();
-                StartNetworkGame();
+                currentState = State.SimulateLocal;
+                CreateHull(); 
                 Debug.Log("Switched to simulation mode");
             }
             else
             {
                 // Возвращаемся в режим создания
-                currentState = GameState.stateCreate;
-                ResetHull();
-                StopNetworkGame();
+                currentState = State.Create;
+                ResetHull(); 
                 Debug.Log("Switched to creation mode");
             }
         }
     }
     
-    void InitializeNetworkComponents()
-    {
-        // Создаем NetworkManager если его нет
-        if (networkManager == null)
-        {
-            GameObject networkManagerObj = new GameObject("NetworkManager");
-            networkManager = networkManagerObj.AddComponent<NetworkManager>();
-            
-            // Настраиваем NetworkConfig
-            NetworkConfig networkConfig = new NetworkConfig();
-            networkConfig.PlayerPrefab = Resources.Load<GameObject>("Create/cell");
-            
-            // Создаем UnityTransport и настраиваем его
-            var transport = networkManagerObj.AddComponent<UnityTransport>();
-            networkConfig.NetworkTransport = transport;
-            
-            // Отключаем управление сценой, чтобы избежать конфликтов
-            networkConfig.EnableSceneManagement = false;
-            
-            // Теперь присваиваем полностью настроенный networkConfig
-            networkManager.NetworkConfig = networkConfig;
-            
-            Debug.Log("NetworkManager created with UnityTransport");
-        }
-        
-        // Создаем NetworkObjectSpawner
-        // if (spawner == null)
-        // {
-        //     GameObject spawnerObj = new GameObject("NetworkObjectSpawner");
-        //     spawner = spawnerObj.AddComponent<NetworkObjectSpawner>();
-        // }
-        
-        // Создаем NetworkPlayerManager
-        // if (playerManager == null)
-        // {
-        //     GameObject playerManagerObj = new GameObject("NetworkPlayerManager");
-        //     playerManager = playerManagerObj.AddComponent<NetworkPlayerManager>();
-        // }
-        
-        Debug.Log("Network components initialized");
-    }
+     
     
-    void HandleNetworkInputs()
-    {
-        if (currentState == GameState.stateSimulatePlay)
-        {
-            // Клавиши для сетевого управления
-            if (Input.GetKeyDown(KeyCode.H)) // Host
-            {
-                StartHost();
-            }
-            if (Input.GetKeyDown(KeyCode.C)) // Client
-            {
-                StartClient();
-            }
-            if (Input.GetKeyDown(KeyCode.S)) // Server
-            {
-                StartServer();
-            }
-            if (Input.GetKeyDown(KeyCode.D)) // Disconnect
-            {
-                Disconnect();
-            }
-        }
-    }
+   
     
-    void StartNetworkGame()
-    {
-        if (networkManager != null && !networkManager.IsListening)
-        {
-            Debug.Log("Starting network game...");
-            // Автоматически создаем комнату как хост
-            StartHost();
-        }
-    }
-    
-    void StopNetworkGame()
-    {
-        if (networkManager != null && networkManager.IsListening)
-        {
-            Debug.Log("Stopping network game...");
-            networkManager.Shutdown();
-        }
-    }
-    
-    void StartHost()
-    {
-        if (networkManager != null && !networkManager.IsListening)
-        {
-            networkManager.StartHost();
-            Debug.Log("Started as Host");
-        }
-    }
-    
-    void StartClient()
-    {
-        if (networkManager != null && !networkManager.IsListening)
-        {
-            networkManager.StartClient();
-            Debug.Log("Started as Client");
-        }
-    }
-    
-    void StartServer()
-    {
-        if (networkManager != null && !networkManager.IsListening)
-        {
-            networkManager.StartServer();
-            Debug.Log("Started as Server");
-        }
-    }
-    
-    void Disconnect()
-    {
-        if (networkManager != null && networkManager.IsListening)
-        {
-            networkManager.Shutdown();
-            Debug.Log("Disconnected from network");
-        }
-    }
     
     void OnGUI()
     {
-        if (currentState == GameState.stateSimulatePlay)
+        if (currentState == State.SimulateLocal)
         {
             GUILayout.BeginArea(new Rect(10, 10, 300, 200));
             GUILayout.Label("=== NETWORK CONTROLS ===");
@@ -204,7 +80,6 @@ public class Play : MonoBehaviour
             GUILayout.Label("D - Disconnect");
             GUILayout.Label("SPACE - Toggle Mode");
             GUILayout.Label($"Timer: {localTimer:F2}");
-            GUILayout.Label($"Network Status: {(networkManager?.IsListening == true ? "Connected" : "Disconnected")}");
             GUILayout.EndArea();
         }
     }

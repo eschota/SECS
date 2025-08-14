@@ -29,7 +29,7 @@ public class Creator : MonoBehaviour
     void Update()
     {
         // Проверяем состояние Play - если в режиме симуляции, не выполняем создание
-        if (_play != null && _play.currentState == Play.GameState.stateCreate)
+        if (_play != null && _play.currentState == Play.State.Create)
         {
             CreateCell();
             ChangeCurrentCellType();
@@ -192,6 +192,26 @@ void LoadPrefabs()
             {
                 Destroy(current_prefab.gameObject);
                 current_prefab_index = 1;
+                Destroy(current_prefab);
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            current_prefab_position = current_prefab.transform.position;
+            if (current_prefab_index != 2)
+            {
+                Destroy(current_prefab.gameObject);
+                current_prefab_index = 2;
+                Destroy(current_prefab);
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            current_prefab_position = current_prefab.transform.position;
+            if (current_prefab_index != 3)
+            {
+                Destroy(current_prefab.gameObject);
+                current_prefab_index = 3;
                 Destroy(current_prefab);
             }
         }
