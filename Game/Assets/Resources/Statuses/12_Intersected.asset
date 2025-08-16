@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 12_Intersected
   m_EditorClassIdentifier: 
   isKinematic: 1
-  meshRenderer: 0
+  meshRenderer: 1
   targetLocalPosition: {x: 0, y: 319, z: 0}
   targetLocalRotation: {x: 0, y: 0.8790252, z: 0, w: -0.47677526}
   targetLocalScale: {x: 1, y: 1, z: 1}
@@ -22,17 +22,17 @@ MonoBehaviour:
   gravityForceMode: 0
   forceToTargetPosition: 25
   targetPositionForceMode: 0
-  targetPulse: 0
+  targetPulse: 1
   pulseSpeed: 1
   targetPulseLocalScale: {x: 1, y: 1, z: 1}
   targetPulseLocalPosition: {x: 0, y: 0, z: 0}
   targetPulseLocalRotation: {x: 0, y: 0, z: 0, w: 1}
   current_shader: {fileID: 4800000, guid: e27d9ac146597684d8ffa378cf53ccf0, type: 3}
-  targetDiffuseColor: {r: 0.9748427, g: 0.015327617, b: 0.015327617, a: 0.6666667}
+  targetDiffuseColor: {r: 2, g: 0.03225767, b: 0, a: 1}
   selfEmissive: 1
-  transparency: 0.7
-  wireframeToggle: 0
-  wireframeColor: {r: 1, g: 0.003144443, b: 0.003144443, a: 0}
+  transparency: 1
+  wireframeToggle: 1
+  wireframeColor: {r: 2, g: 0.14158215, b: 0.109803915, a: 1}
   wireframeThickness: 1
   smoothness: 1
   transitionCurve:
@@ -40,19 +40,19 @@ MonoBehaviour:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1
+      value: 0
       inSlope: 0
       outSlope: 0
-      tangentMode: 34
+      tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1
+      time: 0.2
       value: 1
       inSlope: 0
       outSlope: 0
-      tangentMode: 34
+      tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0

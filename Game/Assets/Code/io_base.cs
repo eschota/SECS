@@ -60,6 +60,7 @@ public class io_base : MonoBehaviour
                     {
                         foreach (var cell in target_cells)
                         {
+                            if(cell.target_mesh_renderer != null)
                             cell.target_mesh_renderer.enabled = currentStatusSO.meshRenderer;
                         }
                     }
@@ -105,14 +106,7 @@ public class io_base : MonoBehaviour
     {
         if (targetRigidbody == null) targetRigidbody = GetComponent<Rigidbody>();
 
-        foreach (var cell in target_cells)
-        {
-            var renderer = cell.GetComponent<Renderer>();
-            if (renderer != null && !cellMaterials.ContainsKey(renderer))
-            {
-                cellMaterials.Add(renderer, renderer.material);
-            }
-        }
+       
         
         previousStatusSO = GetStatusSO(_status);
         if (previousStatusSO == null)
@@ -126,9 +120,6 @@ public class io_base : MonoBehaviour
         localTimer += Time.deltaTime;
 
         var currentStatusSO = GetStatusSO(Status);
-        if (currentStatusSO == null || previousStatusSO == null) return;
-        
-        if(targetRigidbody.isKinematic == false) return;
 
         float transitionDuration = currentStatusSO.transitionCurve.keys.Length > 1 ? currentStatusSO.transitionCurve.keys.Last().time : 1f;
         statusTransitionTimer += Time.deltaTime;
@@ -143,10 +134,6 @@ public class io_base : MonoBehaviour
         }
 
         Vector3 baseScale = Vector3.Lerp(previousStatusSO.targetLocalScale, currentStatusSO.targetLocalScale, curveValue);
-        if (curveValue > 1f)
-        {
-            baseScale *= curveValue;
-        }
 
         // Lerp shader properties
         Color diffuseColor = Color.Lerp(previousStatusSO.targetDiffuseColor, currentStatusSO.targetDiffuseColor, curveValue);
@@ -167,17 +154,13 @@ public class io_base : MonoBehaviour
             {
                 UpdatePulse(ref finalPosition, ref finalScale, ref finalRotation, currentStatusSO);
             }
-            // ВАЖНО НЕ ТРОГАЙ ЭТОТ КОД!!!
-            cell.transform.localPosition = Vector3.Lerp(cell.transform.localPosition, cell.target_local_position, curveValue);
-            cell.transform.localRotation = Quaternion.Lerp(cell.transform.localRotation, cell.target_local_rotation, curveValue);
-            cell.transform.localScale = Vector3.Lerp(cell.transform.localScale, Vector3.one, curveValue);
 
-            var renderer = cell.GetComponent<Renderer>();
-            if (renderer != null && cellMaterials.TryGetValue(renderer, out Material mat))
+            if (cell.target_mesh_renderer != null)
             {
                 Color finalBaseColor = diffuseColor;
                 finalBaseColor.a = transparency;
-                
+
+                var mat = cell.target_mesh_renderer.material;
                 mat.SetColor("_BaseColor", finalBaseColor);
                 mat.SetColor("_EmissionColor", diffuseColor * emissive);
                 mat.SetFloat("_WireframeToggle", wireframeToggle);
@@ -185,6 +168,12 @@ public class io_base : MonoBehaviour
                 mat.SetFloat("_WireframeThickness", wireframeThickness);
                 mat.SetFloat("_Smoothness", smoothness);
             }
+            // ВАЖНО НЕ ТРОГАЙ ЭТОТ КОД!!!
+            cell.transform.localPosition = Vector3.Lerp(cell.transform.localPosition, cell.target_local_position, curveValue);
+            cell.transform.localRotation = Quaternion.Lerp(cell.transform.localRotation, cell.target_local_rotation, curveValue);
+            cell.transform.localScale = Vector3.Lerp(cell.transform.localScale, Vector3.one, curveValue);
+
+          
         }
     }
 

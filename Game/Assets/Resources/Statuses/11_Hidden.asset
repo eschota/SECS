@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 11_Hidden
   m_EditorClassIdentifier: 
   isKinematic: 1
-  meshRenderer: 0
+  meshRenderer: 1
   targetLocalPosition: {x: 0, y: 319, z: 0}
   targetLocalRotation: {x: 0, y: 0.8790252, z: 0, w: -0.47677526}
   targetLocalScale: {x: 1, y: 1, z: 1}

@@ -116,6 +116,14 @@ public class Creator : MonoBehaviour
         {
             if (SnapGrid)
             {
+                var cell_to_check = hit.collider.GetComponent<io_cell>();
+                if(!cell_to_check.possible_to_place)
+                {
+                    current_prefab.Status = io_base.io_base_status.Hidden;
+                    return;
+                }
+
+
                 // Определяем направление касания (normal)
                 Vector3 hitNormal = hit.normal;
 
@@ -146,7 +154,10 @@ public class Creator : MonoBehaviour
                 current_prefab.target_world_position = targetPosition;
                 // check direction of hitNormal and rotate current_prefab to this direction
                 Vector3 direction = hitNormal;
+                //find cell of collider
+                
 
+              
                 current_prefab.target_world_rotation = Quaternion.LookRotation(direction);
                 // snap to 90 degrees
                 current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
