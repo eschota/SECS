@@ -9,7 +9,18 @@ public class UI_Canvas : MonoBehaviour
 {
     [SerializeField] List<RectTransform> CreateSubs;
     [SerializeField] public Transform ui_camera;
+
+    [SerializeField] Color target_Normal_Color_forTypes;
+    [SerializeField] Color target_Normal_Color_forSubs;
+
+    [SerializeField]List<UI_Button> Types_Buttons; 
+    
+    // Tracking selected buttons
+    private UI_Button selectedTypeButton;
+    public UI_Button[] selectedSubButtons; // One selected button per sub group
     public static UI_Canvas i;
+
+    public static event System.Action<UI_Button> SubTypeSelected;
     // Update is called once per frame
     void Awake()
     {
@@ -17,6 +28,9 @@ public class UI_Canvas : MonoBehaviour
         
         // Expect items under Assets/Resources/items_serialized/{0..4}
         const int foldersCount = 5;
+        
+        // Initialize selected buttons tracking
+        selectedSubButtons = new UI_Button[foldersCount];
 
         // 1) Duplicate base CreateSub 4 times alongside the original
         for (int i = 1; i < foldersCount; i++)
@@ -39,6 +53,12 @@ public class UI_Canvas : MonoBehaviour
             sub.gameObject.SetActive(i == 0);
             sub.localPosition = new Vector3(sub.localPosition.x, 0, 0);
         }
+          Destroy(CreateSubs[0].GetComponentInChildren<UI_Button>().gameObject);
+        // 4) Setup type buttons if they exist
+        SetupTypeButtons();
+        
+        // 5) Select first elements in each group
+        SelectInitialButtons();
     }
 
     private void BuildButtonsForSub(RectTransform sub, int folderIndex)
@@ -53,18 +73,27 @@ public class UI_Canvas : MonoBehaviour
         }
 
         Transform buttonParent = template.transform.parent;
-        // Do not delete any existing buttons; use the first found as the template
-        // Keep the template even if there are no items; do not destroy it
-
+        
+        // If no items, destroy template and return
+        if (items.Length == 0)
+        {
+            DestroyImmediate(template.gameObject);
+            return;
+        }
+        
+        // Create buttons for all items
         for (int i = 0; i < items.Length; i++)
         {
-            UI_Button uiButton = i == 0 ? template : Instantiate(template, buttonParent);
+            UI_Button uiButton = Instantiate(template, buttonParent);
             uiButton.name = $"ButtonSub_{folderIndex}_{i}";
 
             var item = items[i];
 
             // Assign reference
             uiButton.Item = item;
+            
+            // Set up button for sub group selection
+            uiButton.SetupAsSubButton(folderIndex);
 
             // Replace sprite on target image (prefer explicit Targetimage, otherwise find any Image in children)
             Image target = uiButton.Targetimage != null ? uiButton.Targetimage : uiButton.GetComponentInChildren<Image>(true);
@@ -77,8 +106,8 @@ public class UI_Canvas : MonoBehaviour
             {
                 uiButton.gameObject.SetActive(true);
             }
-            // Buttons stay enabled; only parent subs are toggled
-        }
+        } 
+      
     }
 
     private item_SO[] LoadItemsForFolder(int folderIndex)
@@ -145,5 +174,120 @@ public class UI_Canvas : MonoBehaviour
             sub.gameObject.SetActive(false);
         }
         CreateSubs[index].gameObject.SetActive(true);
+    }
+    
+    // Setup type buttons
+    private void SetupTypeButtons()
+    {
+        if (Types_Buttons != null)
+        {
+            for (int i = 0; i < Types_Buttons.Count; i++)
+            {
+                if (Types_Buttons[i] != null)
+                {
+                    Types_Buttons[i].SetupAsTypeButton();
+                }
+            }
+        }
+    }
+    
+    // Select initial buttons (first in each group)
+    private void SelectInitialButtons()
+    {
+        // Select first type button if exists
+        if (Types_Buttons != null && Types_Buttons.Count > 0 && Types_Buttons[0] != null)
+        {
+            SelectTypeButton(Types_Buttons[0]);
+        }
+        
+        // Select first button in each sub group
+        for (int i = 0; i < CreateSubs.Count; i++)
+        {
+            UI_Button firstButton = GetFirstButtonInSub(CreateSubs[i]);
+            if (firstButton != null)
+            {
+                SelectSubButton(firstButton, i);
+            }
+        }
+    }
+    
+    // Helper to get first UI_Button in a sub
+    private UI_Button GetFirstButtonInSub(RectTransform sub)
+    {
+        UI_Button[] buttons = sub.GetComponentsInChildren<UI_Button>(true);
+        return buttons.Length > 0 ? buttons[0] : null;
+    }
+    
+    // Method to handle type button selection
+    public void SelectTypeButton(UI_Button button)
+    {
+        // Reset previous selection
+        if (selectedTypeButton != null)
+        {
+            ResetButtonColor(selectedTypeButton);
+            SetToggleState(selectedTypeButton, false);
+        }
+        
+        // Set new selection
+        selectedTypeButton = button;
+        SetButtonColor(button, target_Normal_Color_forTypes);
+        SetToggleState(button, true);
+    }
+    
+    // Method to handle sub button selection
+    public void SelectSubButton(UI_Button button, int subGroupIndex)
+    {
+        if (subGroupIndex < 0 || subGroupIndex >= selectedSubButtons.Length) return;
+        
+        // Reset previous selection in this sub group
+        if (selectedSubButtons[subGroupIndex] != null)
+        {
+            ResetButtonColor(selectedSubButtons[subGroupIndex]);
+            SetToggleState(selectedSubButtons[subGroupIndex], false);
+        }
+        
+        // Set new selection
+        selectedSubButtons[subGroupIndex] = button;
+        SetButtonColor(button, target_Normal_Color_forSubs);
+        SetToggleState(button, true);
+        SubTypeSelected?.Invoke(button);
+    }
+    
+    // Helper method to set button color
+    private void SetButtonColor(UI_Button button, Color color)
+    {
+        if (button == null) return;
+        Toggle toggle = button.GetComponent<Toggle>();
+        if (toggle != null)
+        {
+            ColorBlock colors = toggle.colors;
+            colors.normalColor = color;
+            colors.selectedColor = color;
+            toggle.colors = colors;
+        }
+    }
+    
+    // Helper method to reset button color to white
+    private void ResetButtonColor(UI_Button button)
+    {
+        if (button == null) return;
+        Toggle toggle = button.GetComponent<Toggle>();
+        if (toggle != null)
+        {
+            ColorBlock colors = toggle.colors;
+            colors.normalColor = new Color(0,0,0,0);
+            toggle.colors = colors;
+        }
+    }
+    
+    // Helper method to set toggle state
+    private void SetToggleState(UI_Button button, bool isOn)
+    {
+        if (button == null) return;
+        Toggle toggle = button.GetComponent<Toggle>();
+        if (toggle != null)
+        {
+            toggle.isOn = isOn;
+        }
     }
 }

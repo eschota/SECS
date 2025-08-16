@@ -33,8 +33,7 @@ public class Creator : MonoBehaviour
         // Проверяем состояние Play - если в режиме симуляции, не выполняем создание
         if (_play != null && _play.currentState == Play.State.Create)
         {
-            CreateCell();
-            ChangeCurrentCellType();
+            CreateCell(); 
         }
     }
     public List<io_base> prefabs = new List<io_base>();
@@ -47,17 +46,18 @@ public class Creator : MonoBehaviour
     [SerializeField] private List<Material> _materials = new List<Material>();
     public bool SnapGrid = true;
     private io_base _current_prefab;
-    public int current_prefab_index = 0;
+    public io_base current_prefab_to_chabge; 
     public io_base current_prefab
     {
         get
         {
             if (_current_prefab == null)
             {
-                var a = Instantiate(prefabs[current_prefab_index], transform);
+                
+                var a = Instantiate(current_prefab_to_chabge, transform);
                 _current_prefab = a;
                 _current_prefab.transform.position = _cam.target_pivot_position;
-                _current_prefab.name = "Current Create"; 
+                _current_prefab.name = "Current Create";
                 // Убеждаемся, что текущий префаб остается в иерархии Creator
                 _current_prefab.transform.SetParent(transform);
                 _current_prefab.Status = io_base.io_base_status.Creating;
@@ -68,15 +68,14 @@ public class Creator : MonoBehaviour
         set
         {
             if (value != null)
-            {
-                current_prefab_index = value.io_base_cell_type;
+            { 
                 _current_prefab = null;
             }
             else
             {
                 _current_prefab = null;
             }
-            
+
         }
     }
     void CreateCell()
@@ -86,11 +85,11 @@ public class Creator : MonoBehaviour
         // Обработка нажатия кнопки мыши
         if (Input.GetMouseButtonDown(0))
         {
-             if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit2, 1000, layer_mask))
-             {
+            if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit2, 1000, layer_mask))
+            {
                 return;
-             }
-            
+            }
+
 
             // Создание клетки при нажатии
             if (current_prefab != null && current_prefab.Status != io_base.io_base_status.Intersected)
@@ -98,10 +97,10 @@ public class Creator : MonoBehaviour
                 AllActions?.Invoke(ActionType.Create, current_prefab);
 
                 // Убеждаемся, что клетка остается в иерархии Creator, а не попадает в пивот
-                current_prefab.transform.SetParent(transform); 
+                current_prefab.transform.SetParent(transform);
 
                 // Смещаем пивот к точке создания клетки
-                _cam.target_pivot_position = current_prefab.transform.position;         
+                _cam.target_pivot_position = current_prefab.transform.position;
                 current_prefab.Status = io_base.io_base_status.Placing;
                 current_prefab = null;
             }
@@ -152,7 +151,7 @@ public class Creator : MonoBehaviour
                 // snap to 90 degrees
                 current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
                 // check intersections 
-                foreach (var cell in current_prefab.target_cells)                
+                foreach (var cell in current_prefab.target_cells)
                 {
                     // Применяем поворот к локальной позиции клетки
                     Vector3 rotatedLocalPosition = current_prefab.target_world_rotation * cell.target_local_position;
@@ -160,22 +159,22 @@ public class Creator : MonoBehaviour
 
                     foreach (var b in cells)
                     {
-                        if(b!=current_prefab) 
-                        foreach (var cell2 in b.target_cells)
-                        {
-                            Vector3 rotatedLocalPosition2 = b.target_world_rotation * cell2.target_local_position;
-                            Vector3 worldCellPosition2 = b.target_world_position + rotatedLocalPosition2;
-                            if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
+                        if (b != current_prefab)
+                            foreach (var cell2 in b.target_cells)
                             {
-                                current_prefab.Status = io_base.io_base_status.Intersected;
-                                return;
+                                Vector3 rotatedLocalPosition2 = b.target_world_rotation * cell2.target_local_position;
+                                Vector3 worldCellPosition2 = b.target_world_position + rotatedLocalPosition2;
+                                if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
+                                {
+                                    current_prefab.Status = io_base.io_base_status.Intersected;
+                                    return;
+                                }
                             }
-                        } 
-                        
+
                     }
                 }
                 current_prefab.Status = io_base.io_base_status.Creating;
-                    
+
             }
             else
             {
@@ -184,81 +183,39 @@ public class Creator : MonoBehaviour
         }
         else
         {
-            if(current_prefab.Status != io_base.io_base_status.Intersected)
-            current_prefab.Status = io_base.io_base_status.Hidden;
+            if (current_prefab.Status != io_base.io_base_status.Intersected)
+                current_prefab.Status = io_base.io_base_status.Hidden;
             // Если луч не попал никуда, можно скрыть объект или разместить в дефолтной позиции
-           
+
         }
     }
-    
-void LoadPrefabs()
-{
-    var prefabs_list = Resources.LoadAll<io_base>("Create");
-    foreach (var prefab in prefabs_list)
+
+    void LoadPrefabs()
     {
-        prefabs.Add(prefab);
+        var prefabs_list = Resources.LoadAll<io_base>("Create");
+        foreach (var prefab in prefabs_list)
+        {
+            prefabs.Add(prefab);
+        }
+        current_prefab_to_chabge = prefabs[0];
     }
-}
     void CreateCameraWitPivot()
     {
 
         _cam = gameObject.AddComponent<cam>();
         _play = gameObject.AddComponent<Play>();
     }
-    public Vector3 current_prefab_position  = Vector3.zero;
-    public void ChangeCurrentCellType()
-    {
-        if(Input.GetKeyDown(KeyCode.Alpha1))
-        {
-            if (current_prefab_index != 0)
-            {
-                current_prefab_position = current_prefab.transform.position;
-                Destroy(current_prefab.gameObject);
-                current_prefab_index = 0;
-                Destroy(current_prefab);
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            current_prefab_position = current_prefab.transform.position;
-            if (current_prefab_index != 1)
-            {
-                Destroy(current_prefab.gameObject);
-                current_prefab_index = 1;
-                Destroy(current_prefab);
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha3))
-        {
-            current_prefab_position = current_prefab.transform.position;
-            if (current_prefab_index != 2)
-            {
-                Destroy(current_prefab.gameObject);
-                current_prefab_index = 2;
-                Destroy(current_prefab);
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha4))
-        {
-            current_prefab_position = current_prefab.transform.position;
-            if (current_prefab_index != 3)
-            {
-                Destroy(current_prefab.gameObject);
-                current_prefab_index = 3;
-                Destroy(current_prefab);
-            }
-        }
-    }
+    public Vector3 current_prefab_position = Vector3.zero;
      
-void PlacePrefabs()
-{
+    void PlacePrefabs()
+    {
         foreach (var prefab in prefabs)
         {
-            var new_prefab = Instantiate(prefab, transform);  
+            var new_prefab = Instantiate(prefab, transform);
             cells.Add(new_prefab);
             new_prefab.Status = io_base.io_base_status.Placing;
             return;
-        }       
+        }
     }
 
 #if UNITY_EDITOR
@@ -323,7 +280,7 @@ void PlacePrefabs()
         SceneManager.LoadScene("UI", LoadSceneMode.Additive);
         StartCoroutine(WaitForUIAndDestroy());
     }
-    
+
     private System.Collections.IEnumerator WaitForUIAndDestroy()
     {
         // Ждем пока UI_Canvas инициализируется
@@ -331,12 +288,27 @@ void PlacePrefabs()
         {
             yield return null;
         }
-        
+
         // Теперь безопасно удаляем камеру UI
         if (UI_Canvas.i.ui_camera != null)
         {
             Destroy(UI_Canvas.i.ui_camera.gameObject);
         }
+        UI_Canvas.SubTypeSelected += OnSubTypeSelected; 
     }
+
+    private void OnSubTypeSelected(UI_Button button)
+    {
+        Debug.Log("OnSubTypeSelected: " + button.name);
+        current_prefab_to_chabge = button.Item.prefab;
+        current_prefab_position = current_prefab.transform.position;
+        Destroy(current_prefab.gameObject);  
+        current_prefab = null;
+    }
+    void OnDestroy()
+    {
+        UI_Canvas.SubTypeSelected -= OnSubTypeSelected;
+    }
+    
   
 }

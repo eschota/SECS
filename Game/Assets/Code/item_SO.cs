@@ -4,6 +4,7 @@ using UnityEngine.UI;
 [CreateAssetMenu(fileName = "item_SO", menuName = "Game/item_SO", order = 0)]
 public class item_SO : ScriptableObject
 {
+    public io_base prefab;
     public Sprite icon;
     public string Title;
     [TextArea]

@@ -13,6 +13,11 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     private RectTransform _targetRectTransform;
     private bool _isHovered = false;
     private Coroutine _clickCoroutine;
+    
+    // Selection system
+    public enum ButtonType { Type, Sub }
+    public ButtonType buttonType = ButtonType.Sub;
+    public int subGroupIndex = -1; // For sub buttons only
 
     private float localTimer = 0f;
     void Start()
@@ -69,6 +74,9 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             StopCoroutine(_clickCoroutine);
         }
         _clickCoroutine = StartCoroutine(ClickPulse());
+        
+        // Handle selection
+        HandleSelection();
     }
 
     System.Collections.IEnumerator ClickPulse()
@@ -114,6 +122,35 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         {
             StopCoroutine(_clickCoroutine);
             _clickCoroutine = null;
+        }
+    }
+    
+    // Setup methods
+    public void SetupAsTypeButton()
+    {
+        buttonType = ButtonType.Type;
+        subGroupIndex = -1;
+    }
+    
+    public void SetupAsSubButton(int groupIndex)
+    {
+        buttonType = ButtonType.Sub;
+        subGroupIndex = groupIndex;
+    }
+    
+    // Handle selection logic
+    private void HandleSelection()
+    {
+        if (UI_Canvas.i == null) return;
+        
+        switch (buttonType)
+        {
+            case ButtonType.Type:
+                UI_Canvas.i.SelectTypeButton(this);
+                break;
+            case ButtonType.Sub:
+                UI_Canvas.i.SelectSubButton(this, subGroupIndex);
+                break;
         }
     }
 }
