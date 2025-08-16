@@ -118,7 +118,7 @@ public class UI_ToolTip : MonoBehaviour
         _hoverTargetButton = targetButton;
         _hoverItem = targetButton != null ? targetButton.Item : null;
         _hoverTimer = 0f;
-        Debug.Log($"UI_ToolTip BeginHover target={(targetButton!=null?targetButton.name:"null")} title={_hoverItem?.Title}");
+        //Debug.Log($"UI_ToolTip BeginHover target={(targetButton!=null?targetButton.name:"null")} title={_hoverItem?.Title}");
         if (_isShowing)
         {
             // Update text/size immediately when switching targets
@@ -152,7 +152,7 @@ public class UI_ToolTip : MonoBehaviour
         }
         UpdatePositionAndFlip();
         SetVisible(true);
-        Debug.Log($"UI_ToolTip ShowNow target={_hoverTargetButton?.name} title={_hoverItem?.Title} screen=({Screen.width}x{Screen.height}) worldPos={tooltipRect.position}");
+        //Debug.Log($"UI_ToolTip ShowNow target={_hoverTargetButton?.name} title={_hoverItem?.Title} screen=({Screen.width}x{Screen.height}) worldPos={tooltipRect.position}");
     }
 
     private bool ApplyTextAndResize()

@@ -5,7 +5,8 @@ using System.Linq;
 
 public class io_base : MonoBehaviour
 {
-    public enum io_base_status
+    public enum
+    io_base_status
     {
         None = 0,
         Creating = 1,
@@ -17,7 +18,9 @@ public class io_base : MonoBehaviour
         Dragging = 7,
         Placing = 8,
         Physics = 9,
-        PhysicsToTargetPositions = 10
+        PhysicsToTargetPositions = 10,
+        Hidden = 11,
+        Intersected = 12
     }
 
     public List<io_base_status> status_list = new List<io_base_status>();
@@ -52,6 +55,14 @@ public class io_base : MonoBehaviour
                 {
                     targetRigidbody.isKinematic = currentStatusSO.isKinematic;
                     TurnColliders(currentStatusSO.collidersEnabled);
+
+                    if (currentStatusSO.meshRenderer)
+                    {
+                        foreach (var cell in target_cells)
+                        {
+                            cell.target_mesh_renderer.enabled = currentStatusSO.meshRenderer;
+                        }
+                    }
                     
                     if (currentStatusSO.current_shader != null)
                     {

@@ -73,6 +73,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: df2d03b08ab08fe45a0a3ba9450a772e, type: 2}
   - {fileID: 11400000, guid: 9ca4486b7708e3748b261869523e2a14, type: 2}
   - {fileID: 11400000, guid: ee54cade5c8643e42bb1cb78fed90615, type: 2}
+  - {fileID: 11400000, guid: 67f16b8a5d9e40f4f9b4a8cd25fb5f65, type: 2}
+  - {fileID: 11400000, guid: e0d705ca3db931c45a9cd9f402a53755, type: 2}
   targetRigidbody: {fileID: 6959628718673731917}
   _status: 0
 --- !u!114 &-3543465441684289404

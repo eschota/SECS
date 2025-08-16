@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
+using UnityEngine.SceneManagement;
 
 
 public class Creator : MonoBehaviour
@@ -25,6 +26,7 @@ public class Creator : MonoBehaviour
         LoadPrefabs();
         PlacePrefabs();
         CreateCameraWitPivot();
+        LoadUI();
     }
     void Update()
     {
@@ -54,7 +56,7 @@ public class Creator : MonoBehaviour
             {
                 var a = Instantiate(prefabs[current_prefab_index], transform);
                 _current_prefab = a;
-                _current_prefab.transform.position = current_prefab_position;
+                _current_prefab.transform.position = _cam.target_pivot_position;
                 _current_prefab.name = "Current Create"; 
                 // Убеждаемся, что текущий префаб остается в иерархии Creator
                 _current_prefab.transform.SetParent(transform);
@@ -84,10 +86,14 @@ public class Creator : MonoBehaviour
         // Обработка нажатия кнопки мыши
         if (Input.GetMouseButtonDown(0))
         {
-            Debug.Log("Mouse button down detected!");
+             if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit2, 1000, layer_mask))
+             {
+                return;
+             }
+            
 
             // Создание клетки при нажатии
-            if (current_prefab != null)
+            if (current_prefab != null && current_prefab.Status != io_base.io_base_status.Intersected)
             {
                 AllActions?.Invoke(ActionType.Create, current_prefab);
 
@@ -141,20 +147,47 @@ public class Creator : MonoBehaviour
                 current_prefab.target_world_position = targetPosition;
                 // check direction of hitNormal and rotate current_prefab to this direction
                 Vector3 direction = hitNormal;
+
                 current_prefab.target_world_rotation = Quaternion.LookRotation(direction);
                 // snap to 90 degrees
                 current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
+                // check intersections 
+                foreach (var cell in current_prefab.target_cells)                
+                {
+                    // Применяем поворот к локальной позиции клетки
+                    Vector3 rotatedLocalPosition = current_prefab.target_world_rotation * cell.target_local_position;
+                    Vector3 worldCellPosition = current_prefab.target_world_position + rotatedLocalPosition;
 
+                    foreach (var b in cells)
+                    {
+                        if(b!=current_prefab) 
+                        foreach (var cell2 in b.target_cells)
+                        {
+                            Vector3 rotatedLocalPosition2 = b.target_world_rotation * cell2.target_local_position;
+                            Vector3 worldCellPosition2 = b.target_world_position + rotatedLocalPosition2;
+                            if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
+                            {
+                                current_prefab.Status = io_base.io_base_status.Intersected;
+                                return;
+                            }
+                        } 
+                        
+                    }
+                }
+                current_prefab.Status = io_base.io_base_status.Creating;
+                    
             }
             else
             {
-                //current_prefab.target_transform.position = hit.point;
+                //  current_prefab.Status = io_base.io_base_status.Hidden;
             }
         }
         else
         {
+            if(current_prefab.Status != io_base.io_base_status.Intersected)
+            current_prefab.Status = io_base.io_base_status.Hidden;
             // Если луч не попал никуда, можно скрыть объект или разместить в дефолтной позиции
-            //current_prefab.target_transform.position = Vector3.zero;
+           
         }
     }
     
@@ -284,4 +317,26 @@ void PlacePrefabs()
         }
     }
 #endif
+    private void LoadUI()
+    {
+        // load scene UI additively
+        SceneManager.LoadScene("UI", LoadSceneMode.Additive);
+        StartCoroutine(WaitForUIAndDestroy());
+    }
+    
+    private System.Collections.IEnumerator WaitForUIAndDestroy()
+    {
+        // Ждем пока UI_Canvas инициализируется
+        while (UI_Canvas.i == null)
+        {
+            yield return null;
+        }
+        
+        // Теперь безопасно удаляем камеру UI
+        if (UI_Canvas.i.ui_camera != null)
+        {
+            Destroy(UI_Canvas.i.ui_camera.gameObject);
+        }
+    }
+  
 }

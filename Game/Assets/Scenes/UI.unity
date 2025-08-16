@@ -935,6 +935,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CreateSubs:
   - {fileID: 1405008123}
+  ui_camera: {fileID: 813933602}
 --- !u!1 &317831286
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,6 +4,8 @@ using UnityEngine;
 public class io_base_SO : ScriptableObject
 { 
     public bool isKinematic;
+
+    public bool meshRenderer = true;
     public Vector3 targetLocalPosition;
     public Quaternion targetLocalRotation = Quaternion.identity;
     public Vector3 targetLocalScale = Vector3.one;

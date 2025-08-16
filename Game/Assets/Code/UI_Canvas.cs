@@ -8,10 +8,13 @@ using UnityEditor;
 public class UI_Canvas : MonoBehaviour
 {
     [SerializeField] List<RectTransform> CreateSubs;
-
+    [SerializeField] public Transform ui_camera;
+    public static UI_Canvas i;
     // Update is called once per frame
     void Awake()
     {
+        i = this;
+        
         // Expect items under Assets/Resources/items_serialized/{0..4}
         const int foldersCount = 5;
 
