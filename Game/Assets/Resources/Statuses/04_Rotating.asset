@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: 04_Rotating
   m_EditorClassIdentifier: 
   isKinematic: 1
+  meshRenderer: 1
   targetLocalPosition: {x: 0, y: 0, z: 0}
   targetLocalRotation: {x: 0, y: 0, z: 0, w: 1}
   targetLocalScale: {x: 1, y: 1, z: 1}
@@ -33,7 +34,7 @@ MonoBehaviour:
   wireframeToggle: 0
   wireframeColor: {r: 0, g: 0, b: 0, a: 1}
   wireframeThickness: 1
-  smoothness: 0.5
+  smoothness: 0.295
   transitionCurve:
     serializedVersion: 2
     m_Curve:

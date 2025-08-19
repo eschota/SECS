@@ -34,7 +34,7 @@ MonoBehaviour:
   wireframeToggle: 1
   wireframeColor: {r: 2, g: 0.14158215, b: 0.109803915, a: 1}
   wireframeThickness: 1
-  smoothness: 1
+  smoothness: 0.295
   transitionCurve:
     serializedVersion: 2
     m_Curve:

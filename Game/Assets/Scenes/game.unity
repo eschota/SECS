@@ -17,14 +17,14 @@ RenderSettings:
   m_Fog: 1
   m_FogColor: {r: 0.84549654, g: 0.9433962, b: 0.9433962, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.02
+  m_FogDensity: 0.001
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.2578616, g: 0.2578616, b: 0.2578616, a: 1}
-  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
-  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
-  m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientSkyColor: {r: 1, g: 1, b: 1, a: 1}
+  m_AmbientEquatorColor: {r: 0.41194963, g: 1, b: 0.97928137, a: 1}
+  m_AmbientGroundColor: {r: 0.4339623, g: 0.4339623, b: 0.4339623, a: 1}
+  m_AmbientIntensity: 7.2
+  m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
@@ -32,12 +32,12 @@ RenderSettings:
   m_FlareFadeSpeed: 3
   m_HaloTexture: {fileID: 0}
   m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
-  m_DefaultReflectionMode: 0
+  m_DefaultReflectionMode: 1
   m_DefaultReflectionResolution: 128
-  m_ReflectionBounces: 1
+  m_ReflectionBounces: 5
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 0}
+  m_Sun: {fileID: 203844588}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -172,7 +172,7 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 1, g: 0.9785366, b: 0.92, a: 1}
-  m_Intensity: 3.14159
+  m_Intensity: 10
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -331,10 +331,12 @@ MonoBehaviour:
   - {fileID: 4800000, guid: 5caf62d8bd7c44596ace77ef9eb8ea31, type: 3}
   - {fileID: 4800000, guid: da07703fcc09f8d4799221050659bd55, type: 3}
   - {fileID: 4800000, guid: e27d9ac146597684d8ffa378cf53ccf0, type: 3}
+  - {fileID: 4800000, guid: 0a5b833dea9547b4f97eb8e877077c0b, type: 3}
   _prefabs:
   - {fileID: 5863668223384983802, guid: b58708d45e6ce5744a6cb8daa994279a, type: 3}
   - {fileID: 5863668223384983802, guid: fb068d336405b614285460d04282bb7d, type: 3}
   - {fileID: 5863668223384983802, guid: d3cf7274b034cbb4f9a38f313cb1b409, type: 3}
+  - {fileID: 5863668223384983802, guid: 0a4fbadc33109cf47a6599dac9f54530, type: 3}
   _statuses:
   - {fileID: 11400000, guid: 1c828a750d8b7f742bd2d78dce3dc5fc, type: 2}
   - {fileID: 11400000, guid: 4d1c40b7c1bb4884da4c096a360461f5, type: 2}
@@ -347,6 +349,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: df2d03b08ab08fe45a0a3ba9450a772e, type: 2}
   - {fileID: 11400000, guid: 9ca4486b7708e3748b261869523e2a14, type: 2}
   - {fileID: 11400000, guid: ee54cade5c8643e42bb1cb78fed90615, type: 2}
+  - {fileID: 11400000, guid: 67f16b8a5d9e40f4f9b4a8cd25fb5f65, type: 2}
+  - {fileID: 11400000, guid: e0d705ca3db931c45a9cd9f402a53755, type: 2}
   _materials:
   - {fileID: 2100000, guid: 8fecd203d93fa074db5761ec203d2dae, type: 2}
   - {fileID: 2100000, guid: fd77d76b3aa7a5b4cb7c1486ee1b4d3e, type: 2}
@@ -364,7 +368,7 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 906760d8a88ac8347bf6143e6364ef6f, type: 2}
   - {fileID: 2100000, guid: efe6cf2f8f07392458b177532c1eb81c, type: 2}
   SnapGrid: 1
-  current_prefab_index: 0
+  current_prefab_to_chabge: {fileID: 0}
   current_prefab_position: {x: 0, y: 5, z: 0}
 --- !u!4 &646896356
 Transform:
@@ -676,7 +680,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 4348ca0b054c81441bddc0e6358618ca, type: 2}
+  sharedProfile: {fileID: 11400000, guid: ab09877e2e707104187f6f83e2f62510, type: 2}
 --- !u!4 &1160234427
 Transform:
   m_ObjectHideFlags: 0

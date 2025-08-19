@@ -15,7 +15,7 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     private Coroutine _clickCoroutine;
     
     // Selection system
-    public enum ButtonType { Type, Sub }
+    public enum ButtonType { Menu, Type, Sub }
     public ButtonType buttonType = ButtonType.Sub;
     public int subGroupIndex = -1; // For sub buttons only
 
@@ -148,7 +148,7 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             case ButtonType.Type:
                 UI_Canvas.i.SelectTypeButton(this);
                 break;
-            case ButtonType.Sub:
+            case ButtonType.Sub:                
                 UI_Canvas.i.SelectSubButton(this, subGroupIndex);
                 break;
         }

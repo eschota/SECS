@@ -28,13 +28,13 @@ MonoBehaviour:
   targetPulseLocalPosition: {x: 0, y: 1, z: 0}
   targetPulseLocalRotation: {x: 0.043619387, y: 0, z: 0, w: 0.99904823}
   current_shader: {fileID: 4800000, guid: e27d9ac146597684d8ffa378cf53ccf0, type: 3}
-  targetDiffuseColor: {r: 8.574187, g: 4.868383, b: 0, a: 1}
+  targetDiffuseColor: {r: 1.4980394, g: 0.8505797, b: 0, a: 1}
   selfEmissive: 0.53
   transparency: 0.2
   wireframeToggle: 1
   wireframeColor: {r: 0, g: 0, b: 0, a: 1}
   wireframeThickness: 1
-  smoothness: 0
+  smoothness: 0.295
   transitionCurve:
     serializedVersion: 2
     m_Curve:
@@ -48,7 +48,7 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 0.25
+      time: 0.5
       value: 1
       inSlope: 0
       outSlope: 0

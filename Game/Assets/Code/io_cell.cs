@@ -15,9 +15,8 @@ public class io_cell : MonoBehaviour
     void OnValidate()
     {
         target_collider = GetComponent<Collider>(); 
-        target_transform = GetComponent<Transform>();
-        target_io_base = GetComponent<io_base>();
-
+        target_transform = GetComponent<Transform>();  
+        if(target_io_base == null)
         target_io_base = GetComponentInParent<io_base>();
     }
     void Awake()
@@ -26,6 +25,20 @@ public class io_cell : MonoBehaviour
         target_local_rotation = target_transform.localRotation;
     }
 
+    void OnDrawGizmos()
+    {
+        // draw cube by possible to place color
+        if(possible_to_place)
+        {
+            Gizmos.color = Color.green;
+        }
+        else
+        {
+            Gizmos.color = Color.red;
+        }
+        Gizmos.color = new Color(Gizmos.color.r, Gizmos.color.g, Gizmos.color.b, 0.1f);
+        Gizmos.DrawCube(transform.position, Vector3.one);
+    }
     // Update is called once per frame
     void Update()
     {

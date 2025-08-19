@@ -28,7 +28,7 @@ public class Play : MonoBehaviour
         i = this;
         // Получаем ссылки на камеру и Creator
         _cam = Camera.main;
-        _creator = FindObjectOfType<Creator>();
+        _creator = FindFirstObjectByType<Creator>();
         
         // Инициализируем сетевые компоненты 
     }
@@ -45,21 +45,27 @@ public class Play : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) && localTimer >= localThreshold)
         {
             localTimer = 0f; // Сбрасываем таймер
-            
-            if (currentState == State.Create)
-            {
-                // Переключаемся в режим симуляции
-                currentState = State.SimulateLocal;
-                CreateHull(); 
-                Debug.Log("Switched to simulation mode");
-            }
-            else
-            {
-                // Возвращаемся в режим создания
-                currentState = State.Create;
-                ResetHull(); 
-                Debug.Log("Switched to creation mode");
-            }
+            TogglePlayMode();
+        }
+    }
+
+    public void TogglePlayMode()
+    {
+        if (currentState == State.Create)
+        {
+            // Переключаемся в режим симуляции
+            currentState = State.SimulateLocal;
+            CreateHull(); 
+            Debug.Log("Switched to simulation mode");
+            OnPlayStateChange?.Invoke(currentState);
+        }
+        else
+        {
+            // Возвращаемся в режим создания
+            currentState = State.Create;
+            ResetHull(); 
+            Debug.Log("Switched to creation mode");
+            OnPlayStateChange?.Invoke(currentState);
         }
     }
     

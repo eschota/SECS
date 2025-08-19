@@ -33,7 +33,7 @@ public class io_base : MonoBehaviour
 
     [SerializeField] public Rigidbody targetRigidbody;
 
-    private float statusTransitionTimer = 0f;
+    public float statusTransitionTimer = 0f;
     private Dictionary<Renderer, Material> cellMaterials = new Dictionary<Renderer, Material>();
     private io_base_SO previousStatusSO;
 
@@ -134,7 +134,8 @@ public class io_base : MonoBehaviour
         }
 
         Vector3 baseScale = Vector3.Lerp(previousStatusSO.targetLocalScale, currentStatusSO.targetLocalScale, curveValue);
-
+        baseScale = new Vector3(Mathf.Clamp(baseScale.x, 0.01f, 1000f), Mathf.Clamp(baseScale.y, 0.01f, 1000f), Mathf.Clamp(baseScale.z, 0.01f, 1000f));
+        transform.localScale = baseScale;
         // Lerp shader properties
         Color diffuseColor = Color.Lerp(previousStatusSO.targetDiffuseColor, currentStatusSO.targetDiffuseColor, curveValue);
         float emissive = Mathf.Lerp(previousStatusSO.selfEmissive, currentStatusSO.selfEmissive, curveValue);

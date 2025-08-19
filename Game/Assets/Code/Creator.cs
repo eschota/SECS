@@ -53,6 +53,19 @@ public class Creator : MonoBehaviour
         {
             if (_current_prefab == null)
             {
+                // Проверяем, что у нас есть префаб для создания
+                if (current_prefab_to_chabge == null)
+                {
+                    if (prefabs.Count > 0)
+                    {
+                        current_prefab_to_chabge = prefabs[0];
+                    }
+                    else
+                    {
+                        Debug.LogError("No prefabs available to create!");
+                        return null;
+                    }
+                }
                 
                 var a = Instantiate(current_prefab_to_chabge, transform);
                 _current_prefab = a;
@@ -78,6 +91,9 @@ public class Creator : MonoBehaviour
 
         }
     }
+
+
+   // private io_base last_prefab_over;
     void CreateCell()
     {
         LayerMask layer_mask = LayerMask.GetMask("io_base");
@@ -94,6 +110,9 @@ public class Creator : MonoBehaviour
             // Создание клетки при нажатии
             if (current_prefab != null && current_prefab.Status != io_base.io_base_status.Intersected)
             {
+                // Сохраняем состояние для Undo перед созданием клетки
+                SaveStateForUndo();
+                
                 AllActions?.Invoke(ActionType.Create, current_prefab);
 
                 // Убеждаемся, что клетка остается в иерархии Creator, а не попадает в пивот
@@ -117,9 +136,16 @@ public class Creator : MonoBehaviour
             if (SnapGrid)
             {
                 var cell_to_check = hit.collider.GetComponent<io_cell>();
-                if(!cell_to_check.possible_to_place)
+
+                // if (cell_to_check.target_io_base != last_prefab_over)
+                // { 
+                //     last_prefab_over = cell_to_check.target_io_base;
+                //     last_prefab_over.statusTransitionTimer = 0;
+                // }
+                if (!cell_to_check.possible_to_place)
                 {
-                    current_prefab.Status = io_base.io_base_status.Hidden;
+                    if (current_prefab != null)
+                        current_prefab.Status = io_base.io_base_status.Hidden;
                     return;
                 }
 
@@ -151,40 +177,49 @@ public class Creator : MonoBehaviour
                 // Размещаем объект в позиции, кратной 1x1x1, относительно центра коллайдера
                 Vector3 targetPosition = colliderCenter + offset;
                 targetPosition = new Vector3(Mathf.Round(targetPosition.x), Mathf.Round(targetPosition.y), Mathf.Round(targetPosition.z));
-                current_prefab.target_world_position = targetPosition;
-                // check direction of hitNormal and rotate current_prefab to this direction
-                Vector3 direction = hitNormal;
-                //find cell of collider
-                
 
-              
-                current_prefab.target_world_rotation = Quaternion.LookRotation(direction);
-                // snap to 90 degrees
-                current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
-                // check intersections 
-                foreach (var cell in current_prefab.target_cells)
+                if (current_prefab != null)
                 {
-                    // Применяем поворот к локальной позиции клетки
-                    Vector3 rotatedLocalPosition = current_prefab.target_world_rotation * cell.target_local_position;
-                    Vector3 worldCellPosition = current_prefab.target_world_position + rotatedLocalPosition;
-
-                    foreach (var b in cells)
+                    if((targetPosition-current_prefab.target_world_position).sqrMagnitude > 0.1f)
                     {
-                        if (b != current_prefab)
-                            foreach (var cell2 in b.target_cells)
-                            {
-                                Vector3 rotatedLocalPosition2 = b.target_world_rotation * cell2.target_local_position;
-                                Vector3 worldCellPosition2 = b.target_world_position + rotatedLocalPosition2;
-                                if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
-                                {
-                                    current_prefab.Status = io_base.io_base_status.Intersected;
-                                    return;
-                                }
-                            }
-
+                        current_prefab.statusTransitionTimer = 0;
                     }
+
+                    current_prefab.target_world_position = targetPosition;
+                    // check direction of hitNormal and rotate current_prefab to this direction
+                    Vector3 direction = hitNormal;
+                    //find cell of collider
+                    
+
+                  
+                    current_prefab.target_world_rotation = Quaternion.LookRotation(direction);
+                    // snap to 90 degrees
+                    current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
+                    // check intersections 
+                    foreach (var cell in current_prefab.target_cells)
+                    {
+                        // Применяем поворот к локальной позиции клетки
+                        Vector3 rotatedLocalPosition = current_prefab.target_world_rotation * cell.target_local_position;
+                        Vector3 worldCellPosition = current_prefab.target_world_position + rotatedLocalPosition;
+
+                        foreach (var b in cells)
+                        {
+                            if (b != current_prefab)
+                                foreach (var cell2 in b.target_cells)
+                                {
+                                    Vector3 rotatedLocalPosition2 = b.target_world_rotation * cell2.target_local_position;
+                                    Vector3 worldCellPosition2 = b.target_world_position + rotatedLocalPosition2;
+                                    if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
+                                    {
+                                        current_prefab.Status = io_base.io_base_status.Intersected;
+                                        return;
+                                    }
+                                }
+
+                        }
+                    }
+                    current_prefab.Status = io_base.io_base_status.Creating;
                 }
-                current_prefab.Status = io_base.io_base_status.Creating;
 
             }
             else
@@ -194,7 +229,7 @@ public class Creator : MonoBehaviour
         }
         else
         {
-            if (current_prefab.Status != io_base.io_base_status.Intersected)
+            if (current_prefab != null && current_prefab.Status != io_base.io_base_status.Intersected)
                 current_prefab.Status = io_base.io_base_status.Hidden;
             // Если луч не попал никуда, можно скрыть объект или разместить в дефолтной позиции
 
@@ -310,16 +345,303 @@ public class Creator : MonoBehaviour
 
     private void OnSubTypeSelected(UI_Button button)
     {
+        if (button.gameObject.name == "ButtonClearMachine")
+        {
+            ClearMachine();
+            return;
+        }
+        if (button.gameObject.name == "ButtonSave")
+        {
+            SaveMachine();
+            return;
+        } if (button.gameObject.name == "ButtonLoad")
+        {
+            LoadMachine();
+            return;
+        } if (button.gameObject.name == "ButtonUnDo")
+        {
+            UndoMachine();
+            return;
+        } if (button.gameObject.name == "ButtonReDo")
+        {
+            RedoMachine();
+            return;
+        } if (button.gameObject.name == "ButtonPlay")
+        {
+            PlayMachine();
+            return;
+        }
         Debug.Log("OnSubTypeSelected: " + button.name);
         current_prefab_to_chabge = button.Item.prefab;
-        current_prefab_position = current_prefab.transform.position;
-        Destroy(current_prefab.gameObject);  
+        if (current_prefab != null)
+        {
+            current_prefab_position = current_prefab.transform.position;
+            Destroy(current_prefab.gameObject);  
+        }
         current_prefab = null;
     }
     void OnDestroy()
     {
         UI_Canvas.SubTypeSelected -= OnSubTypeSelected;
     }
-    
+    private void ClearMachine()
+    {
+        // Сохраняем состояние для Undo перед очисткой
+        if (cells.Count > 0)
+        {
+            SaveStateForUndo();
+        }
+        
+        ClearMachineInternal();
+    }
+
+    private void ClearMachineInternal()
+    {
+        foreach (var cell in cells)
+        {
+            Destroy(cell.gameObject);
+        }
+        cells.Clear();
+        current_prefab = null;
+        // НЕ обнуляем current_prefab_to_chabge, чтобы можно было создавать новые префабы
+        if (current_prefab_to_chabge == null && prefabs.Count > 0)
+        {
+            current_prefab_to_chabge = prefabs[0];
+        }
+        _cam.target_pivot_position = Vector3.zero;
+        _cam.target_pivot_rotation = Quaternion.identity;        
+        _cam.target_pivot_position = Vector3.zero;
+        _cam.target_pivot_rotation = Quaternion.identity;
+    }
+
+    // Структура для сериализации машины
+    [System.Serializable]
+    public class MachineData
+    {
+        public List<CellData> cells = new List<CellData>();
+        public Vector3 cameraPivotPosition;
+        public Quaternion cameraPivotRotation;
+    }
+
+    [System.Serializable]
+    public class CellData
+    {
+        public int prefabIndex;
+        public Vector3 position;
+        public Quaternion rotation;
+        public int status;
+        public string name;
+    }
+
+    // Undo/Redo система
+    private List<MachineData> undoStack = new List<MachineData>();
+    private List<MachineData> redoStack = new List<MachineData>();
+    private const int maxUndoSteps = 20;
+
+    private void SaveMachine()
+    {
+        // Создаем автосейв с ротацией
+        int currentCounter = PlayerPrefs.GetInt("auto_save_counter", 0);
+        currentCounter = (currentCounter % 5) + 1; // Ротация от 1 до 5
+        
+        string saveKey = "auto_save_" + currentCounter;
+        MachineData machineData = CreateMachineData();
+        string json = JsonUtility.ToJson(machineData, true);
+        
+        PlayerPrefs.SetString(saveKey, json);
+        PlayerPrefs.SetInt("auto_save_counter", currentCounter);
+        PlayerPrefs.Save();
+        
+        Debug.Log($"Machine saved to {saveKey}");
+    }
+
+    private void LoadMachine()
+    {
+        // Ищем последний автосейв
+        int lastCounter = PlayerPrefs.GetInt("auto_save_counter", 0);
+        if (lastCounter == 0)
+        {
+            Debug.Log("No auto saves found");
+            return;
+        }
+        
+        string loadKey = "auto_save_" + lastCounter;
+        string json = PlayerPrefs.GetString(loadKey, "");
+        
+        if (string.IsNullOrEmpty(json))
+        {
+            Debug.Log("No save data found");
+            return;
+        }
+        
+        try
+        {
+            // Сохраняем текущее состояние для Undo перед загрузкой
+            SaveStateForUndo();
+            
+            MachineData machineData = JsonUtility.FromJson<MachineData>(json);
+            LoadMachineData(machineData);
+            Debug.Log($"Machine loaded from {loadKey}");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error loading machine: {e.Message}");
+        }
+    }
+
+    private void UndoMachine()
+    {
+        if (undoStack.Count == 0)
+        {
+            Debug.Log("Nothing to undo");
+            return;
+        }
+
+        // Сохраняем текущее состояние в redo стек
+        MachineData currentState = CreateMachineData();
+        redoStack.Add(currentState);
+        
+        // Ограничиваем размер redo стека
+        if (redoStack.Count > maxUndoSteps)
+        {
+            redoStack.RemoveAt(0);
+        }
+
+        // Загружаем предыдущее состояние
+        MachineData previousState = undoStack[undoStack.Count - 1];
+        undoStack.RemoveAt(undoStack.Count - 1);
+        
+        LoadMachineData(previousState);
+        Debug.Log("Undo performed");
+    }
+
+    private void RedoMachine()
+    {
+        if (redoStack.Count == 0)
+        {
+            Debug.Log("Nothing to redo");
+            return;
+        }
+
+        // Сохраняем текущее состояние в undo стек
+        MachineData currentState = CreateMachineData();
+        undoStack.Add(currentState);
+        
+        // Ограничиваем размер undo стека
+        if (undoStack.Count > maxUndoSteps)
+        {
+            undoStack.RemoveAt(0);
+        }
+
+        // Загружаем следующее состояние
+        MachineData nextState = redoStack[redoStack.Count - 1];
+        redoStack.RemoveAt(redoStack.Count - 1);
+        
+        LoadMachineData(nextState);
+        Debug.Log("Redo performed");
+    }
+
+    private void PlayMachine()
+    {
+        if (_play == null)
+        {
+            Debug.LogError("Play component not found!");
+            return;
+        }
+
+        // Используем публичный метод из Play.cs
+        _play.TogglePlayMode();
+        Debug.Log("Play mode toggled via button");
+    }
+
+    private MachineData CreateMachineData()
+    {
+        MachineData data = new MachineData();
+        
+        // Сохраняем позицию и поворот камеры
+        if (_cam != null)
+        {
+            data.cameraPivotPosition = _cam.target_pivot_position;
+            data.cameraPivotRotation = _cam.target_pivot_rotation;
+        }
+        
+        // Сохраняем все клетки кроме текущей создаваемой
+        foreach (var cell in cells)
+        {
+            if (cell != null && cell.Status != io_base.io_base_status.Creating)
+            {
+                CellData cellData = new CellData();
+                
+                // Находим индекс префаба
+                cellData.prefabIndex = FindPrefabIndex(cell);
+                cellData.position = cell.target_world_position;
+                cellData.rotation = cell.target_world_rotation;
+                cellData.status = (int)cell.Status;
+                cellData.name = cell.name;
+                
+                data.cells.Add(cellData);
+            }
+        }
+        
+        return data;
+    }
+
+    private void LoadMachineData(MachineData data)
+    {
+        // Очищаем текущую машину без сохранения состояния для Undo
+        ClearMachineInternal();
+        
+        // Восстанавливаем позицию камеры
+        if (_cam != null)
+        {
+            _cam.target_pivot_position = data.cameraPivotPosition;
+            _cam.target_pivot_rotation = data.cameraPivotRotation;
+        }
+        
+        // Восстанавливаем клетки
+        foreach (var cellData in data.cells)
+        {
+            if (cellData.prefabIndex >= 0 && cellData.prefabIndex < prefabs.Count)
+            {
+                var newCell = Instantiate(prefabs[cellData.prefabIndex], transform);
+                newCell.target_world_position = cellData.position;
+                newCell.target_world_rotation = cellData.rotation;
+                newCell.transform.position = cellData.position;
+                newCell.transform.rotation = cellData.rotation;
+                newCell.Status = (io_base.io_base_status)cellData.status;
+                newCell.name = cellData.name;
+                
+                cells.Add(newCell);
+            }
+        }
+    }
+
+    private int FindPrefabIndex(io_base cell)
+    {
+        for (int i = 0; i < prefabs.Count; i++)
+        {
+            if (prefabs[i].io_base_cell_type == cell.io_base_cell_type)
+            {
+                return i;
+            }
+        }
+        return 0; // Возвращаем первый префаб если не найден
+    }
+
+    // Сохраняем состояние для Undo при важных действиях
+    private void SaveStateForUndo()
+    {
+        MachineData currentState = CreateMachineData();
+        undoStack.Add(currentState);
+        
+        // Ограничиваем размер undo стека
+        if (undoStack.Count > maxUndoSteps)
+        {
+            undoStack.RemoveAt(0);
+        }
+        
+        // Очищаем redo стек при новом действии
+        redoStack.Clear();
+    }
   
 }
