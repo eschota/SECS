@@ -133,7 +133,7 @@ public class io_base : MonoBehaviour
             transform.rotation = Quaternion.Lerp(transform.rotation, target_world_rotation, curveValue);
         }
 
-        Vector3 baseScale = Vector3.Lerp(previousStatusSO.targetLocalScale, currentStatusSO.targetLocalScale, curveValue);
+        Vector3 baseScale = Vector3.Lerp(transform.localScale, currentStatusSO.targetLocalScale, curveValue);
         baseScale = new Vector3(Mathf.Clamp(baseScale.x, 0.01f, 1000f), Mathf.Clamp(baseScale.y, 0.01f, 1000f), Mathf.Clamp(baseScale.z, 0.01f, 1000f));
         transform.localScale = baseScale;
         // Lerp shader properties

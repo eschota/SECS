@@ -30,10 +30,13 @@ public class Creator : MonoBehaviour
     }
     void Update()
     {
+        if (Play.i.currentState != Play.State.Create) return;
+        
+            
         // Проверяем состояние Play - если в режиме симуляции, не выполняем создание
         if (_play != null && _play.currentState == Play.State.Create)
         {
-            CreateCell(); 
+            CreateCell();
         }
     }
     public List<io_base> prefabs = new List<io_base>();
@@ -70,6 +73,9 @@ public class Creator : MonoBehaviour
                 var a = Instantiate(current_prefab_to_chabge, transform);
                 _current_prefab = a;
                 _current_prefab.transform.position = _cam.target_pivot_position;
+                _current_prefab.target_world_position = _cam.target_pivot_position;
+                _current_prefab.target_world_rotation = Quaternion.identity;
+                _current_prefab.transform.localScale=Vector3.one*0.01f;
                 _current_prefab.name = "Current Create";
                 // Убеждаемся, что текущий префаб остается в иерархии Creator
                 _current_prefab.transform.SetParent(transform);
@@ -128,7 +134,7 @@ public class Creator : MonoBehaviour
         // Обработка отпускания кнопки мыши
         if (Input.GetMouseButtonUp(0))
         {
-            Debug.Log("Mouse button up detected!");
+//            Debug.Log("Mouse button up detected!");
         }
 
         if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1000, layer_mask))
@@ -340,7 +346,7 @@ public class Creator : MonoBehaviour
         {
             Destroy(UI_Canvas.i.ui_camera.gameObject);
         }
-        UI_Canvas.SubTypeSelected += OnSubTypeSelected; 
+        UI_Canvas.UI_ChangeState += OnSubTypeSelected; 
     }
 
     private void OnSubTypeSelected(UI_Button button)
@@ -371,7 +377,7 @@ public class Creator : MonoBehaviour
             PlayMachine();
             return;
         }
-        Debug.Log("OnSubTypeSelected: " + button.name);
+//        Debug.Log("OnSubTypeSelected: " + button.name);
         current_prefab_to_chabge = button.Item.prefab;
         if (current_prefab != null)
         {
@@ -382,7 +388,7 @@ public class Creator : MonoBehaviour
     }
     void OnDestroy()
     {
-        UI_Canvas.SubTypeSelected -= OnSubTypeSelected;
+        UI_Canvas.UI_ChangeState -= OnSubTypeSelected;
     }
     private void ClearMachine()
     {

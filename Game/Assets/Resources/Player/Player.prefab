@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2689807212750604791}
   - component: {fileID: 8455619407274543524}
   - component: {fileID: 5832164795553439305}
+  - component: {fileID: 5407384906981163640}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -70,6 +71,21 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!114 &5407384906981163640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3150848344794404651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc931590c11ea1445ad2e6f4c52c9313, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  meshRenderers: []
+  skinnedMeshRenderers: []
+  playerColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!1 &6734666851054400283
 GameObject:
   m_ObjectHideFlags: 0

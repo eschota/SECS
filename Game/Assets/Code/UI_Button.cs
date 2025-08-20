@@ -126,11 +126,7 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     }
     
     // Setup methods
-    public void SetupAsTypeButton()
-    {
-        buttonType = ButtonType.Type;
-        subGroupIndex = -1;
-    }
+    
     
     public void SetupAsSubButton(int groupIndex)
     {

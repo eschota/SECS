@@ -10,6 +10,34 @@ using UnityEditor;
 
 public class UI_Canvas : MonoBehaviour
 {
+    public enum UI_State
+    {
+        None,
+        Create,
+        Simulate,
+        Play,
+        Chatting,
+        Lobby,
+        Queue,
+        Match,
+        Settings,
+        Credits,
+        About,
+        Exit,
+        Help
+    }
+    
+    private UI_State _currentState;
+    public UI_State currentState
+    {
+        get { return _currentState; }
+        set
+        {
+            _currentState = value;
+            UI_ChangeState?.Invoke(null);
+        }
+    }
+
     [SerializeField] List<RectTransform> CreateSubs;
     [SerializeField] public Transform ui_camera;
 
@@ -24,9 +52,9 @@ public class UI_Canvas : MonoBehaviour
     public List<UI_Button> all_sub_buttons= new List<UI_Button>();
     public static UI_Canvas i;
 
-    public static event System.Action<UI_Button> SubTypeSelected;
+    public static event System.Action<UI_Button> UI_ChangeState;
     // Update is called once per frame
-    void Start()
+    void Awake()
     {
         i = this;
 
@@ -63,10 +91,7 @@ public class UI_Canvas : MonoBehaviour
             GameObject go = CreateSubs[i].GetComponentInChildren<UI_Button>().gameObject;
             if (go != null)
                 Destroy(go);
-        }
-
-        // 4) Setup type buttons if they exist
-        SetupTypeButtons();
+        } 
 
 
         // start coroutine to select start sub buttons 
@@ -100,7 +125,7 @@ public class UI_Canvas : MonoBehaviour
     private void BuildButtonsForSub(RectTransform sub, int folderIndex)
     {
         item_SO[] items = LoadItemsForFolder(folderIndex);
-        Debug.Log($"UI_Canvas: Building sub '{sub.name}' from folder index {folderIndex}, items loaded: {items.Length}");
+//        Debug.Log($"UI_Canvas: Building sub '{sub.name}' from folder index {folderIndex}, items loaded: {items.Length}");
         UI_Button template = sub.GetComponentInChildren<UI_Button>(true);
         if (template == null)
         {
@@ -197,13 +222,13 @@ public class UI_Canvas : MonoBehaviour
                 sb.Append(result[i].name);
                 if (i < result.Count - 1) sb.Append(", ");
             }
-            Debug.Log(sb.ToString());
+         //   Debug.Log(sb.ToString());
         }
         return result.ToArray();
     }
     public void ChangeCreateSub(int index)
     {
-        Debug.Log("ChangeCreateSub " + index);
+//        Debug.Log("ChangeCreateSub " + index);
         
         foreach(var sub in CreateSubs)
         {
@@ -214,22 +239,10 @@ public class UI_Canvas : MonoBehaviour
     public void MenuButtonClick(UI_Button uI_Button)
     {
         // event action menu button click 
-        SubTypeSelected?.Invoke(uI_Button);
+        UI_ChangeState?.Invoke(uI_Button);
     }
     // Setup type buttons
-    private void SetupTypeButtons()
-    {
-        if (Types_Buttons != null)
-        {
-            for (int i = 0; i < Types_Buttons.Count; i++)
-            {
-                if (Types_Buttons[i] != null)
-                {
-                    Types_Buttons[i].SetupAsTypeButton();
-                }
-            }
-        }
-    }
+ 
 
     // Select initial buttons (first in each group)
 
@@ -241,7 +254,8 @@ public class UI_Canvas : MonoBehaviour
 
         selectedSubButtons[subGroupIndex] = button;
         SetButtonColor(button, target_Normal_Color_forSubs);
-        Debug.Log($"Select SubButton {button.name} {subGroupIndex}");
+      //  Debug.Log($"Select SubButton {button.name} {subGroupIndex}");
+        UI_ChangeState?.Invoke(button);
         
     }
     // Method to handle type button selection
@@ -257,7 +271,10 @@ public class UI_Canvas : MonoBehaviour
         // Set new selection
         selectedTypeButton = button;
         SetButtonColor(button, target_Normal_Color_forTypes);
-        
+         
+                if(selectedSubButtons[button.subGroupIndex] != null)
+                SelectSubButton(selectedSubButtons[button.subGroupIndex], button.subGroupIndex);
+            
         
     }
     

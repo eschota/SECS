@@ -138,7 +138,7 @@ public class UI_ToolTip : MonoBehaviour
             _hoverTargetButton = null;
             _hoverItem = null;
             _hoverTimer = 0f;
-            Debug.Log("UI_ToolTip EndHover");
+//            Debug.Log("UI_ToolTip EndHover");
             StartFadeOut();
         }
     }

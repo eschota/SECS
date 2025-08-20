@@ -118,8 +118,13 @@ def get_lobby_user(user_id):
 def join_lobby():
     """Добавляет пользователя в лобби"""
     data = request.get_json()
+    print(f"Join lobby request data: {data}")
+    print(f"Join lobby request data type: {type(data)}")
+    print(f"Join lobby request data keys: {data.keys() if data else 'None'}")
+    
     if not data or 'player_id' not in data:
-        return jsonify({"status": "error", "message": "player_id required"}), 400
+        print(f"Join lobby error: Missing player_id in data: {data}")
+        return jsonify({"status": "error", "message": "player_id required!"}), 400
     
     # Проверяем, существует ли пользователь
     user = db.get_user(data['player_id'])
@@ -149,7 +154,12 @@ def leave_lobby():
     
     deleted_user = db.delete_lobby_user(data['player_id'])
     if not deleted_user:
-        return jsonify({"status": "error", "message": "User not found in lobby"}), 404
+        # Если пользователя нет в лобби, считаем что он уже покинул его
+        return jsonify({
+            "status": "success",
+            "message": "User already left lobby or was not in lobby",
+            "user": None
+        })
     
     return jsonify({
         "status": "success",

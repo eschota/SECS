@@ -9,7 +9,8 @@ public class Play : MonoBehaviour
         Start,
         Create,
         SimulateLocal,
-        SimulateOnline
+        SimulateOnline,
+        
     }
     
     [SerializeField] public Camera _cam;
@@ -36,12 +37,14 @@ public class Play : MonoBehaviour
     void Update()
     {
         localTimer += Time.deltaTime;
+        if (UI_Canvas.i.currentState == UI_Canvas.UI_State.Chatting) return;
         SimulaterPlay(); 
         HandleStatusChange();
     }
     
     void SimulaterPlay()
     {
+       
         if (Input.GetKeyDown(KeyCode.Space) && localTimer >= localThreshold)
         {
             localTimer = 0f; // Сбрасываем таймер

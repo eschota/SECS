@@ -57,6 +57,7 @@ from lobby_endpoints import lobby_bp
 from queue_endpoints import queue_bp
 from match_endpoints import match_bp
 from user_endpoints import user_bp
+from chat_endpoints import chat_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -66,6 +67,7 @@ app.register_blueprint(lobby_bp, url_prefix='/api-game-lobby')
 app.register_blueprint(queue_bp, url_prefix='/api-game-queue')
 app.register_blueprint(match_bp, url_prefix='/api-game-match')
 app.register_blueprint(user_bp, url_prefix='/api-game-user')
+app.register_blueprint(chat_bp, url_prefix='/api-game-chat')
 
 STATIC_ONLINE_GAME_DIR = r"c:\\NDLWebServerBuild\\wwwroot\\online-game"
 

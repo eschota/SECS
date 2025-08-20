@@ -20,15 +20,7 @@ public class PlayerSpawner : SimulationBehaviour, IPlayerJoined
             PlayerPrefab,
             spawnPos,
             Quaternion.identity,
-            inputAuthority: player,
-            onBeforeSpawned: (runner, networkObject) =>
-            {
-                var movement = networkObject.GetComponent<PlayerMovement>();
-                if (movement != null)
-                {
-                    movement.team_id = teamId;
-                }
-            }
+            inputAuthority: player
         );
     }
 }

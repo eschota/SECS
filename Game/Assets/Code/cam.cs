@@ -44,13 +44,14 @@ public class cam : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (UI_Canvas.i?.currentState == UI_Canvas.UI_State.Chatting) return;
         if (cameraPivot != null)
         {
             HandleMovement();
             HandleRotation();
             HandleZoom();
             HandleFocus();
-            
+
             cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target_pivot_position, Time.deltaTime * speed);
             _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, targetFov, Time.deltaTime * speed);
         }
@@ -238,7 +239,7 @@ public class cam : MonoBehaviour
             
             isInitialized = true;
             
-            Debug.Log($"Camera initialized - Base local position: {baseLocalPosition}, Base local rotation: {baseLocalRotation}");
+         //   Debug.Log($"Camera initialized - Base local position: {baseLocalPosition}, Base local rotation: {baseLocalRotation}");
         }
     }
 }

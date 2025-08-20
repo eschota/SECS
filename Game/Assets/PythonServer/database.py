@@ -106,6 +106,18 @@ class GameDatabase:
             )
         ''')
         
+        # Таблица сообщений чата
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                message TEXT NOT NULL,
+                message_type TEXT DEFAULT 'text',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (user_id)
+            )
+        ''')
+        
         conn.commit()
         conn.close()
     
@@ -478,8 +490,31 @@ class GameDatabase:
         return game
     
     # Методы для статистики
+    def cleanup_inactive_users(self, timeout_minutes: int = 5):
+        """Очистка неактивных пользователей из лобби"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Удаляем пользователей, которые не были активны более timeout_minutes минут
+        cursor.execute('''
+            DELETE FROM lobby_users 
+            WHERE last_seen < datetime('now', '-{} minutes')
+        '''.format(timeout_minutes))
+        
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        if deleted_count > 0:
+            print(f"Cleaned up {deleted_count} inactive users from lobby")
+        
+        return deleted_count
+    
     def get_server_stats(self) -> Dict[str, Any]:
         """Получение статистики сервера"""
+        # Сначала очищаем неактивных пользователей
+        self.cleanup_inactive_users()
+        
         conn = self.get_connection()
         cursor = conn.cursor()
         
