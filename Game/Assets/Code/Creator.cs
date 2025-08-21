@@ -21,7 +21,16 @@ public class Creator : MonoBehaviour
 
     }
     void Awake()
-    {
+    { if ((prefabs == null || prefabs.Count == 0) && _prefabs != null && _prefabs.Count > 0)
+        prefabs = new List<io_base>(_prefabs);
+
+    // если всё ещё пусто — как раньше, грузим из Resources
+    if (prefabs == null || prefabs.Count == 0)
+        LoadPrefabs();
+
+    // детерминируем порядок (у всех клиентов одинаково)
+    prefabs.Sort((a, b) => string.Compare(a.io_base_cell_type.ToString(), b.io_base_cell_type.ToString(), System.StringComparison.Ordinal));
+
         instance = this;
         LoadPrefabs();
         PlacePrefabs();
@@ -351,6 +360,7 @@ public class Creator : MonoBehaviour
 
     private void OnSubTypeSelected(UI_Button button)
     {
+        if (button == null) return;
         if (button.gameObject.name == "ButtonClearMachine")
         {
             ClearMachine();
@@ -622,7 +632,7 @@ public class Creator : MonoBehaviour
         }
     }
 
-    private int FindPrefabIndex(io_base cell)
+    public int FindPrefabIndex(io_base cell)
     {
         for (int i = 0; i < prefabs.Count; i++)
         {

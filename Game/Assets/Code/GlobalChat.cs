@@ -61,7 +61,7 @@ public class GlobalChat : MonoBehaviour
         // Создаем GameHTTPClient если его нет
         if (GameHTTPClient.Instance == null)
         {
-            Debug.Log("Creating GameHTTPClient...");
+            //Debug.Log("Creating GameHTTPClient...");
             GameObject httpClientObj = new GameObject("GameHTTPClient");
             httpClientObj.AddComponent<GameHTTPClient>();
             DontDestroyOnLoad(httpClientObj);
@@ -82,7 +82,7 @@ public class GlobalChat : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
         }
         
-        Debug.Log("GameHTTPClient found, subscribing to events...");
+        //Debug.Log("GameHTTPClient found, subscribing to events...");
         
         // Подписываемся на события HTTP клиента
         GameHTTPClient.Instance.OnChatMessagesReceived += OnChatMessagesReceived;
@@ -91,7 +91,7 @@ public class GlobalChat : MonoBehaviour
         GameHTTPClient.Instance.OnConnectionStatusChanged += OnConnectionStatusChanged;
         GameHTTPClient.Instance.OnUserLoggedIn += OnUserLoggedIn;
         
-        Debug.Log("Events subscribed, GameHTTPClient should start auto-login process...");
+        //Debug.Log("Events subscribed, GameHTTPClient should start auto-login process...");
         
         // Принудительно запрашиваем счетчик онлайн
         StartCoroutine(GameHTTPClient.Instance.GetOnlineCount());
@@ -112,7 +112,7 @@ public class GlobalChat : MonoBehaviour
     
     private void OnUserLoggedIn(UserData userData)
     {
-        Debug.Log($"User logged in: {userData.nick_name}");
+        //Debug.Log($"User logged in: {userData.nick_name}");
         // Загружаем сообщения чата при подключении
         if (GameHTTPClient.Instance != null)
         {
@@ -127,28 +127,28 @@ public class GlobalChat : MonoBehaviour
         
         if (connected)
         {
-            Debug.Log("Connected to chat server");
+            //Debug.Log("Connected to chat server");
         }
         else
         {
-            Debug.Log("Disconnected from chat server");
+            //Debug.Log("Disconnected from chat server");
         }
     }
     
     private void OnChatMessagesReceived(List<ChatMessage> messages)
     {
-        Debug.Log($"GlobalChat: OnChatMessagesReceived called with {messages?.Count ?? 0} messages");
+        //Debug.Log($"GlobalChat: OnChatMessagesReceived called with {messages?.Count ?? 0} messages");
         
         if (messages == null) 
         {
-            Debug.Log("GlobalChat: Messages list is null");
+            //Debug.Log("GlobalChat: Messages list is null");
             return;
         }
         
         // Если это первая загрузка сообщений, просто заменяем весь список
         if (currentMessages.Count == 0)
         {
-            Debug.Log("GlobalChat: First time loading messages, replacing all");
+            //Debug.Log("GlobalChat: First time loading messages, replacing all");
             currentMessages = new List<ChatMessage>(messages);
             RefreshChatDisplay();
             return;
@@ -162,7 +162,7 @@ public class GlobalChat : MonoBehaviour
             bool messageExists = currentMessages.Any(m => m.id == message.id);
             if (!messageExists)
             {
-                Debug.Log($"GlobalChat: Adding new message: {message.message}");
+                //Debug.Log($"GlobalChat: Adding new message: {message.message}");
                 currentMessages.Add(message);
                 hasNewMessages = true;
             }
@@ -170,18 +170,18 @@ public class GlobalChat : MonoBehaviour
         
         if (hasNewMessages)
         {
-            Debug.Log("GlobalChat: Refreshing chat display due to new messages");
+            //Debug.Log("GlobalChat: Refreshing chat display due to new messages");
             RefreshChatDisplay();
         }
         else
         {
-            Debug.Log("GlobalChat: No new messages to display");
+            //Debug.Log("GlobalChat: No new messages to display");
         }
     }
     
     private void OnNewChatMessage(ChatMessage message)
     {
-        Debug.Log($"GlobalChat: Received new message from {message.nick_name}: {message.message}");
+        //Debug.Log($"GlobalChat: Received new message from {message.nick_name}: {message.message}");
         currentMessages.Add(message);
         AddMessageToDisplay(message);
         ScrollToBottom();
@@ -285,7 +285,7 @@ public class GlobalChat : MonoBehaviour
     
     private void AddMessageToDisplay(ChatMessage message)
     {
-//        Debug.Log($"GlobalChat: AddMessageToDisplay called for message: {message?.message}");
+//        //Debug.Log($"GlobalChat: AddMessageToDisplay called for message: {message?.message}");
         
         if (messagePrefab == null)
         {
@@ -318,7 +318,7 @@ public class GlobalChat : MonoBehaviour
             var sizeFitter = messagePrefab.AddComponent<UnityEngine.UI.ContentSizeFitter>();
             sizeFitter.verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
             
-            Debug.Log("GlobalChat: Created simple message prefab");
+            //Debug.Log("GlobalChat: Created simple message prefab");
         }
         
         if (messagesContent == null)
@@ -332,7 +332,7 @@ public class GlobalChat : MonoBehaviour
         if (layoutGroup == null)
         {
             layoutGroup = messagesContent.gameObject.AddComponent<VerticalLayoutGroup>();
-            Debug.Log("GlobalChat: Added VerticalLayoutGroup to messagesContent");
+            //Debug.Log("GlobalChat: Added VerticalLayoutGroup to messagesContent");
         }
         
         // Настраиваем VerticalLayoutGroup
@@ -349,7 +349,7 @@ public class GlobalChat : MonoBehaviour
         if (contentSizeFitter == null)
         {
             contentSizeFitter = messagesContent.gameObject.AddComponent<ContentSizeFitter>();
-            Debug.Log("GlobalChat: Added ContentSizeFitter to messagesContent");
+            //Debug.Log("GlobalChat: Added ContentSizeFitter to messagesContent");
         }
         
         // Настраиваем ContentSizeFitter
@@ -357,9 +357,9 @@ public class GlobalChat : MonoBehaviour
         contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             
         GameObject messageObj = Instantiate(messagePrefab, messagesContent);
-      //  Debug.Log($"GlobalChat: Created message object: {messageObj.name}");
+        //Debug.Log($"GlobalChat: Created message object: {messageObj.name}");
         ChatMessageUI messageUI = messageObj.GetComponent<ChatMessageUI>();
-    //    Debug.Log($"GlobalChat: ChatMessageUI component: {(messageUI != null ? "Found" : "Not found")}");
+        //Debug.Log($"GlobalChat: ChatMessageUI component: {(messageUI != null ? "Found" : "Not found")}");
         
         // Если есть компонент ChatMessageUI, используем его
         if (messageUI != null)
@@ -457,5 +457,116 @@ public class GlobalChat : MonoBehaviour
                 StartCoroutine(GameHTTPClient.Instance.GetChatMessages());
             }
         }
+    }
+}
+
+[System.Serializable]
+public class ChatMessageUI : MonoBehaviour
+{
+    [Header("UI Components")]
+    [SerializeField] private TMP_Text messageText;
+    [SerializeField] private Image backgroundImage;
+    [SerializeField] private LayoutElement layoutElement;
+    
+    [Header("Message Settings")]
+    [SerializeField] private float minHeight = 30f;
+    [SerializeField] private float maxWidth = 400f;
+    [SerializeField] private float padding = 10f;
+    
+    private void Awake()
+    {
+        SetupComponents();
+    }
+    
+    private void SetupComponents()
+    {
+        // Получаем компоненты если они не назначены
+        if (messageText == null)
+            messageText = GetComponentInChildren<TMP_Text>();
+            
+        if (backgroundImage == null)
+            backgroundImage = GetComponent<Image>();
+            
+        if (layoutElement == null)
+            layoutElement = GetComponent<LayoutElement>();
+            
+        // Добавляем LayoutElement если его нет
+        if (layoutElement == null)
+            layoutElement = gameObject.AddComponent<LayoutElement>();
+            
+        // Настраиваем LayoutElement
+        layoutElement.minHeight = minHeight;
+        layoutElement.preferredHeight = -1; // Автоматический размер по высоте
+        layoutElement.flexibleWidth = 1;
+        layoutElement.flexibleHeight = 1;
+        layoutElement.layoutPriority = 1;
+        
+        // Настраиваем текст
+        if (messageText != null)
+        {
+            messageText.enableWordWrapping = true;
+            messageText.overflowMode = TextOverflowModes.Overflow;
+            messageText.fontSize = 14;
+        }
+        
+        // Добавляем ContentSizeFitter для автоматического размера
+        var sizeFitter = GetComponent<ContentSizeFitter>();
+        if (sizeFitter == null)
+        {
+            sizeFitter = gameObject.AddComponent<ContentSizeFitter>();
+        }
+        sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+    }
+    
+    public void SetMessage(string text, Color textColor, TextAlignmentOptions alignment)
+    {
+        if (messageText != null)
+        {
+            messageText.text = text;
+            messageText.color = textColor;
+            messageText.alignment = alignment;
+        }
+    }
+    
+    public void SetBackgroundColor(Color backgroundColor)
+    {
+        if (backgroundImage != null)
+        {
+            backgroundImage.color = backgroundColor;
+        }
+    }
+    
+    public void SetAsOwnMessage(bool isOwn)
+    {
+        if (isOwn)
+        {
+            // Выравнивание справа для собственных сообщений
+            if (messageText != null)
+                messageText.alignment = TextAlignmentOptions.Right;
+                
+            // Можно добавить дополнительное оформление
+            SetBackgroundColor(new Color(0.2f, 0.4f, 0.8f, 0.3f));
+        }
+        else
+        {
+            // Выравнивание слева для сообщений других игроков
+            if (messageText != null)
+                messageText.alignment = TextAlignmentOptions.Left;
+                
+            SetBackgroundColor(new Color(0.3f, 0.3f, 0.3f, 0.3f));
+        }
+    }
+    
+    public void SetAsSystemMessage()
+    {
+        // Системные сообщения слева
+        if (messageText != null)
+        {
+            messageText.alignment = TextAlignmentOptions.Left;
+            messageText.fontStyle = FontStyles.Italic;
+        }
+        
+        SetBackgroundColor(new Color(1f, 1f, 0f, 0.2f)); // Желтоватый фон
     }
 }

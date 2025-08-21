@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bdeb3330ac822e4da59c3bd1b886bab, type: 3}
   m_Name: 09_Physics
   m_EditorClassIdentifier: 
-  isKinematic: 0
+  isKinematic: 1
   meshRenderer: 1
   targetLocalPosition: {x: 0, y: 0, z: 0}
   targetLocalRotation: {x: 0, y: 0, z: 0, w: 1}

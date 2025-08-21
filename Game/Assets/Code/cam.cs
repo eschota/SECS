@@ -1,3 +1,4 @@
+using Fusion;
 using UnityEngine;
 
 public class cam : MonoBehaviour
@@ -9,80 +10,154 @@ public class cam : MonoBehaviour
     public float movementSpeed = 5f;
     public float rotationSpeed = 2f;
     public float zoomSpeed = 2f;
-    public float minZoomDistance = 0.3f; // 30% от начального расстояния
-    public float maxZoomDistance = 2f;   // 200% от начального расстояния
+    public float minZoomDistance = 0.3f;
+    public float maxZoomDistance = 2f;
     public float minFov = 6.3f;
     public float maxFov = 90f;
     public float verticalMoveDelay = 0.1f;
 
     private GameObject cameraPivot;
-    private Vector3 initialCameraLocalPosition;
-    private Quaternion initialCameraLocalRotation;
-    private Vector3 baseLocalPosition; // Базовая локальная позиция камеры
-    private Quaternion baseLocalRotation; // Базовый локальный поворот камеры
+    private Vector3 baseLocalPosition;
+    private Quaternion baseLocalRotation;
     private float initialDistanceToPivot;
-    private float currentDistanceToPivot;
     private bool isInitialized = false;
     private float baseFov;
     private float targetFov;
     private float verticalMoveTimer = 0f;
-    
+
+    // follow
+    private bool followMachine = false;
+    private Machine followedMachine;
+
     void Awake()
     {
         _cam = Camera.main;
         baseFov = _cam.fieldOfView;
         targetFov = baseFov;
+
         CreatePivot();
-        SetupCameraToFirstCell();
+        SetupCameraToFirstCell(); // стартовое поведение как раньше
+
+        Play.OnPlayStateChange += OnPlayStateChange;
+        Machine.OnLocalMachineReady += OnLocalMachineReady;
     }
 
-    void Start()
+    void OnDestroy()
     {
-      
+        Play.OnPlayStateChange -= OnPlayStateChange;
+        Machine.OnLocalMachineReady -= OnLocalMachineReady;
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (UI_Canvas.i?.currentState == UI_Canvas.UI_State.Chatting) return;
-        if (cameraPivot != null)
-        {
-            HandleMovement();
-            HandleRotation();
-            HandleZoom();
-            HandleFocus();
 
+        // симуляция: pivot тянем к центру баундинга машины (без родительства и поворота)
+        if (followMachine && followedMachine)
+        {
+            Vector3 target = followedMachine.transform.TransformPoint(followedMachine.LocalCenter);
+            cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target, Time.deltaTime * speed);
+        }
+
+        // конструктор: работаем как раньше
+        if (!followMachine)
+            HandleMovement();
+
+        HandleRotation();
+        HandleZoom();
+        HandleFocusConstructor();
+
+        _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, targetFov, Time.deltaTime * speed);
+
+        if (!followMachine)
             cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target_pivot_position, Time.deltaTime * speed);
-            _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, targetFov, Time.deltaTime * speed);
+    }
+
+    // --- режимы ---
+    private void OnPlayStateChange(Play.State state)
+    {
+        if (state == Play.State.Create)
+        {
+            // вернуться к сборке
+            followMachine   = false;
+            followedMachine = null;
+               SetupCameraToLastCell();
+        }
+        else
+        {
+            // переходим в симуляцию: отключаем WASD (followMachine = true)
+            followMachine = true;
+
+            // гарантируем, что камера ребёнок pivot (на случай, если что-то сбросилось)
+            if (_cam.transform.parent != cameraPivot.transform)
+                _cam.transform.SetParent(cameraPivot.transform, true);
+
+            // пробуем сразу найти уже существующую «свою» машину
+            TryAttachToOwnedMachine();
         }
     }
 
+  private void OnLocalMachineReady(Machine m)
+{
+    if (m && m.Object.HasInputAuthority)
+    {
+        if (cameraPivot == null) CreatePivot();
+
+        // <<< ВОТ ЭТО: используем CenterOfMass, fallback на LocalCenter
+        Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
+                                        : m.transform.TransformPoint(m.LocalCenter);
+
+        cameraPivot.transform.position = center;
+
+        initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+        followedMachine = m;
+        followMachine = true;
+
+        Debug.Log("<color=#4DA3FF>[cam]</color> attached to local machine");
+    }
+}
+
+
+    private void TryAttachToOwnedMachine()
+    {
+        var all = FindObjectsOfType<Machine>();
+        foreach (var m in all)
+            if (m && m.Object.HasInputAuthority) { AttachToMachine(m); return; }
+    }
+
+ private void AttachToMachine(Machine m)
+{
+    followedMachine = m;
+    followMachine = true;
+
+    cameraPivot.transform.SetParent(null, true);
+
+    // <<< ВОТ ЭТО: используем CenterOfMass, fallback на LocalCenter
+    Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
+                                    : m.transform.TransformPoint(m.LocalCenter);
+    cameraPivot.transform.position = center;
+
+    initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+}
+
+
+    // --- управление камерой ---
     void HandleMovement()
     {
         if (!isInitialized) return;
-        
+
         Vector3 input = Vector3.zero;
-        
         if (Input.GetKey(KeyCode.W)) input.z += 1f;
         if (Input.GetKey(KeyCode.S)) input.z -= 1f;
         if (Input.GetKey(KeyCode.A)) input.x -= 1f;
         if (Input.GetKey(KeyCode.D)) input.x += 1f;
-        
+
         if (input.magnitude > 0)
         {
-            // Нормализуем входной вектор
             input.Normalize();
-            
-            // Преобразуем в локальные координаты относительно направления камеры
             Vector3 forward = _cam.transform.forward;
-            Vector3 right = _cam.transform.right;
-            
-            // Игнорируем Y компоненту для горизонтального движения
-            forward.y = 0;
-            right.y = 0;
-            forward.Normalize();
-            right.Normalize();
-            
+            Vector3 right   = _cam.transform.right;
+            forward.y = 0; right.y = 0; forward.Normalize(); right.Normalize();
             Vector3 movement = (forward * input.z + right * input.x) * movementSpeed * Time.deltaTime;
             target_pivot_position += movement;
         }
@@ -90,156 +165,126 @@ public class cam : MonoBehaviour
         if (Input.GetKey(KeyCode.E))
         {
             verticalMoveTimer -= Time.deltaTime;
-            if (verticalMoveTimer <= 0)
-            {
-                target_pivot_position.y += 1;
-                verticalMoveTimer = verticalMoveDelay;
-            }
+            if (verticalMoveTimer <= 0) { target_pivot_position.y += 1; verticalMoveTimer = verticalMoveDelay; }
         }
         else if (Input.GetKey(KeyCode.Q))
         {
             verticalMoveTimer -= Time.deltaTime;
-            if (verticalMoveTimer <= 0)
-            {
-                target_pivot_position.y -= 1;
-                verticalMoveTimer = verticalMoveDelay;
-            }
+            if (verticalMoveTimer <= 0) { target_pivot_position.y -= 1; verticalMoveTimer = verticalMoveDelay; }
         }
-        else
-        {
-            verticalMoveTimer = 0;
-        }
+        else verticalMoveTimer = 0;
 
         target_pivot_position.y = Mathf.Clamp(Mathf.Round(target_pivot_position.y), 0f, 100f);
     }
-    
+
     void HandleRotation()
     {
         if (!isInitialized) return;
 
-        if (Input.GetMouseButton(1)) // Правая кнопка мыши
+        if (Input.GetMouseButton(1))
         {
             float mouseX = Input.GetAxis("Mouse X") * rotationSpeed;
             float mouseY = Input.GetAxis("Mouse Y") * rotationSpeed;
 
-            // Текущие углы Эйлера
             Vector3 eulerAngles = _cam.transform.eulerAngles;
+            float currentX = eulerAngles.x; if (currentX > 180f) currentX -= 360f;
 
-            // Преобразуем угол X в диапазон [-180, 180]
-            float currentX = eulerAngles.x;
-            if (currentX > 180f)
-            {
-                currentX -= 360f;
-            }
-
-            // Вычисляем новый угол по вертикали и ограничиваем его
             float newX = Mathf.Clamp(currentX - mouseY, -70f, 70f);
-
-            // Вычисляем новый угол по горизонтали
             float newY = eulerAngles.y + mouseX;
 
-            // Устанавливаем новый поворот
             _cam.transform.rotation = Quaternion.Euler(newX, newY, 0);
-
-            // Устанавливаем позицию камеры относительно пивота
+            _cam.transform.position = cameraPivot.transform.position - _cam.transform.forward * initialDistanceToPivot;
+        }
+        else if (followMachine)
+        {
+            // поддерживаем выбранную дистанцию
             _cam.transform.position = cameraPivot.transform.position - _cam.transform.forward * initialDistanceToPivot;
         }
     }
-    
+
     void HandleZoom()
     {
         if (!isInitialized) return;
-        
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (Mathf.Abs(scroll) > 0.01f)
         {
-            targetFov -= scroll * zoomSpeed * 30f; // Умножаем на 30 для более заметного эффекта
+            targetFov -= scroll * zoomSpeed * 30f;
             targetFov = Mathf.Clamp(targetFov, minFov, maxFov);
         }
     }
 
-    void HandleFocus()
+    void HandleFocusConstructor()
     {
+        if (followMachine) return;
+
         if (Input.GetKeyDown(KeyCode.F))
         {
-            Creator creator = FindObjectOfType<Creator>();
-            if (creator != null && creator.cells.Count > 0)
+            Creator cr = FindObjectOfType<Creator>();
+            if (cr != null && cr.cells.Count > 0)
             {
-                Vector3 averagePosition = Vector3.zero;
-                foreach (var cell in creator.cells)
-                {
-                    averagePosition += cell.transform.position;
-                }
-                averagePosition /= creator.cells.Count;
+                Vector3 avg = Vector3.zero;
+                foreach (var cell in cr.cells) avg += cell.transform.position;
+                avg /= cr.cells.Count;
 
-                io_base closestCell = null;
-                float minDistance = float.MaxValue;
-                foreach (var cell in creator.cells)
+                io_base closest = null;
+                float minDist = float.MaxValue;
+                foreach (var cell in cr.cells)
                 {
-                    float distance = Vector3.Distance(cell.transform.position, averagePosition);
-                    if (distance < minDistance)
-                    {
-                        minDistance = distance;
-                        closestCell = cell;
-                    }
+                    float d = Vector3.Distance(cell.transform.position, avg);
+                    if (d < minDist) { minDist = d; closest = cell; }
                 }
-
-                if (closestCell != null)
-                {
-                    target_pivot_position = closestCell.transform.position;
-                }
+                if (closest) target_pivot_position = closest.transform.position;
             }
         }
     }
-   
-     void CreatePivot()
-     {
-         cameraPivot = new GameObject("CameraPivot");
+
+    void CreatePivot()
+    {
+        cameraPivot = new GameObject("CameraPivot");
         cameraPivot.transform.parent = null;
-        
-        // Сохраняем начальную позицию и поворот камеры относительно мира
-        initialCameraLocalPosition = _cam.transform.position;
-        initialCameraLocalRotation = _cam.transform.rotation;
     }
-    
+
     void SetupCameraToFirstCell()
     {
-        // Находим Creator в сцене
-        Creator creator = FindObjectOfType<Creator>();
-        if (creator != null && creator.cells.Count > 0)
+        Creator cr = FindObjectOfType<Creator>();
+        if (cr != null && cr.cells.Count > 0)
         {
-            // Получаем первую клетку
-            io_base firstCell = creator.cells[0];
+            io_base first = cr.cells[0];
+            cameraPivot.transform.position = first.target_world_position;
 
-            // Помещаем пивот в позицию первой клетки
-            cameraPivot.transform.position = firstCell.target_world_position;
-            
-            // Сохраняем мировую позицию камеры перед изменением иерархии
-            Vector3 worldPosition = _cam.transform.position;
-            Quaternion worldRotation = _cam.transform.rotation;
-            
+            // — не меняем старое поведение: сохраняем world позу и делаем ребёнком pivot
             baseLocalPosition = _cam.transform.position;
             baseLocalRotation = _cam.transform.rotation;
-            // Размещаем камеру внутри иерархии пивота
             _cam.transform.SetParent(cameraPivot.transform, true);
-            
-            // Сохраняем базовые локальные координаты камеры
-            
-            
-            // Устанавливаем камеру в базовую локальную позицию
-            _cam.transform.localPosition = baseLocalPosition;
+            _cam.transform.localPosition = baseLocalPosition; // да, оставляем как у тебя
             _cam.transform.localRotation = baseLocalRotation;
-            
-            // Сохраняем начальное расстояние до пивота
+
             initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
-            currentDistanceToPivot = initialDistanceToPivot;
-            
-            // Устанавливаем целевую позицию пивота
-            target_pivot_position = firstCell.target_world_position;
-            
+            target_pivot_position   = first.target_world_position;
             isInitialized = true;
-            
-         //   Debug.Log($"Camera initialized - Base local position: {baseLocalPosition}, Base local rotation: {baseLocalRotation}");
         }
+    }void SetupCameraToLastCell()
+{
+    Creator cr = FindObjectOfType<Creator>();
+    if (cr != null && cr.cells.Count > 0)
+    {
+        io_base last = cr.cells[cr.cells.Count - 1];
+        cameraPivot.transform.position = last.target_world_position;
+
+        // не ломаем стартовую позу камеры: сохраняем world и просто подвешиваем к pivot
+        baseLocalPosition = _cam.transform.position;
+        baseLocalRotation = _cam.transform.rotation;
+
+        if (_cam.transform.parent != cameraPivot.transform)
+            _cam.transform.SetParent(cameraPivot.transform, true);
+
+        _cam.transform.localPosition = baseLocalPosition;
+        _cam.transform.localRotation = baseLocalRotation;
+
+        initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+        target_pivot_position   = last.target_world_position;
+        isInitialized = true;
     }
+}
+
 }

@@ -76,8 +76,8 @@ public class ModelDownloader : EditorWindow
             "Скачаются файлы из трех папок:\n" +
             "• Версия 1K: текстуры + модель (низкое качество)\n" +
             "• Версия 10K: текстуры + модель (основное качество)\n" +
-            "• Версия 100K: текстуры + модель + VRay камера (высокое качество)\n" +
-            "• Автоматически создаются URP текстуры для всех версий\n" +
+            "• Версия 100K: текстуры + модель + иконка (высокое качество)\n" +
+            "• Скачиваются готовые URP текстуры для всех версий\n" +
             "• Материал создается с текстурами 10K по умолчанию", 
             MessageType.Info);
     }
@@ -122,7 +122,7 @@ public class ModelDownloader : EditorWindow
     {
         // Убираем имя файла .glb и получаем базовый URL без слэша в конце
         string baseUrl = downloadUrl.Replace("/" + baseName + ".glb", "");
-        string targetFolder = Path.Combine(Application.dataPath, "Resources", "Meshes", objectName);
+        string targetFolder = Path.Combine(Application.dataPath, "Meshes", objectName);
 
         // Создаем папку если не существует
         if (!Directory.Exists(targetFolder))
@@ -150,9 +150,14 @@ public class ModelDownloader : EditorWindow
                 description = "металлик карта (1k)"
             },
             new { 
-                url = baseUrl + "/" + baseName + "_1k/" + baseName + "_Roughness.png",
-                localName = objectName + "_1k_Roughness.png",
-                description = "рафнесс карта (1k)"
+                url = baseUrl + "/" + baseName + "_1k/" + baseName + "_AO.png",
+                localName = objectName + "_1k_AO.png",
+                description = "AO карта (1k)"
+            },
+            new { 
+                url = baseUrl + "/" + baseName + "_1k/" + baseName + "_unity_metallic_smoothness.png",
+                localName = objectName + "_1k_urp.png",
+                description = "URP текстура (1k)"
             },
             new { 
                 url = baseUrl + "/" + baseName + "_1k/" + baseName + ".fbx",
@@ -177,9 +182,14 @@ public class ModelDownloader : EditorWindow
                 description = "металлик карта (10k)"
             },
             new { 
-                url = baseUrl + "/" + baseName + "_10k/" + baseName + "_Roughness.png",
-                localName = objectName + "_10k_Roughness.png",
-                description = "рафнесс карта (10k)"
+                url = baseUrl + "/" + baseName + "_10k/" + baseName + "_AO.png",
+                localName = objectName + "_10k_AO.png",
+                description = "AO карта (10k)"
+            },
+            new { 
+                url = baseUrl + "/" + baseName + "_10k/" + baseName + "_unity_metallic_smoothness.png",
+                localName = objectName + "_10k_urp.png",
+                description = "URP текстура (10k)"
             },
             new { 
                 url = baseUrl + "/" + baseName + "_10k/" + baseName + ".fbx",
@@ -204,14 +214,19 @@ public class ModelDownloader : EditorWindow
                 description = "металлик карта (100k)"
             },
             new { 
-                url = baseUrl + "/" + baseName + "_100k/" + baseName + "_Roughness.png",
-                localName = objectName + "_100k_Roughness.png",
-                description = "рафнесс карта (100k)"
+                url = baseUrl + "/" + baseName + "_100k/" + baseName + "_AO.png",
+                localName = objectName + "_100k_AO.png",
+                description = "AO карта (100k)"
             },
             new { 
-                url = baseUrl + "/" + baseName + "_100k/" + baseName + "_VRayCam001_view.jpg",
-                localName = objectName + "_100k_VRayCam001_view.jpg",
-                description = "VRay камера (100k)"
+                url = baseUrl + "/" + baseName + "_100k/" + baseName + "_unity_metallic_smoothness.png",
+                localName = objectName + "_100k_urp.png",
+                description = "URP текстура (100k)"
+            },
+            new { 
+                url = baseUrl + "/" + baseName + "_100k/" + baseName + "_icon.png",
+                localName = objectName + "_100k_icon.png",
+                description = "иконка (100k)"
             },
             new { 
                 url = baseUrl + "/" + baseName + "_100k/" + baseName + ".fbx",
@@ -288,15 +303,15 @@ public class ModelDownloader : EditorWindow
         yield return new WaitForSeconds(0.5f); // Даем время на обновление AssetDatabase
         SetupFBXImportSettings();
         
-        downloadStatus = "Создаем URP текстуру...";
+        downloadStatus = "Настраиваем URP текстуры...";
         Repaint();
         yield return new WaitForSeconds(0.2f);
-        CreateURPTexture();
+        SetupURPTextures();
         
-        downloadStatus = "Настраиваем VRay камеру...";
+        downloadStatus = "Настраиваем иконку...";
         Repaint();
         yield return new WaitForSeconds(0.2f);
-        SetupVRayCamTexture();
+        SetupIconTexture();
         
         downloadStatus = "Создаем материалы и назначаем на модели...";
         Repaint();
@@ -309,90 +324,30 @@ public class ModelDownloader : EditorWindow
         Debug.Log($"Скачивание завершено. Файлы сохранены в: {targetFolder}");
     }
 
-    private void CreateURPTexture()
+    private void SetupURPTextures()
     {
-        // Создаем URP текстуры для всех версий (1k, 10k и 100k)
-        CreateURPTextureForResolution("1k");
-        CreateURPTextureForResolution("10k");
-        CreateURPTextureForResolution("100k");
+        // Настраиваем URP текстуры для всех версий (1k, 10k и 100k)
+        SetupURPTextureForResolution("1k");
+        SetupURPTextureForResolution("10k");
+        SetupURPTextureForResolution("100k");
     }
 
-    private void CreateURPTextureForResolution(string resolution)
+    private void SetupURPTextureForResolution(string resolution)
     {
-        string metallicPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}_Metallic.png";
-        string roughnessPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}_Roughness.png";
-        string urpPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}_urp.png";
+        string urpPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}_urp.png";
 
-        Texture2D metallicTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
-        Texture2D roughnessTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(roughnessPath);
-
-        if (metallicTexture != null && roughnessTexture != null)
+        TextureImporter importer = AssetImporter.GetAtPath(urpPath) as TextureImporter;
+        if (importer != null)
         {
-            // Делаем текстуры читаемыми
-            MakeTextureReadable(metallicPath);
-            MakeTextureReadable(roughnessPath);
+            // Настраиваем как Linear для metallic/smoothness
+            importer.sRGBTexture = false;
+            importer.SaveAndReimport();
             
-            // Перезагружаем после изменения настроек импорта
-            metallicTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
-            roughnessTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(roughnessPath);
-
-            // Создаем новую текстуру
-            int width = Mathf.Max(metallicTexture.width, roughnessTexture.width);
-            int height = Mathf.Max(metallicTexture.height, roughnessTexture.height);
-            
-            Texture2D urpTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-
-            // Комбинируем текстуры
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    // Получаем пиксели с масштабированием если размеры разные
-                    float metallicU = (float)x / width;
-                    float metallicV = (float)y / height;
-                    float roughnessU = (float)x / width;
-                    float roughnessV = (float)y / height;
-
-                    Color metallicPixel = metallicTexture.GetPixelBilinear(metallicU, metallicV);
-                    Color roughnessPixel = roughnessTexture.GetPixelBilinear(roughnessU, roughnessV);
-
-                    // Metallic в RGB каналы (используем grayscale значение)
-                    float metallicValue = metallicPixel.grayscale;
-                    
-                    // Roughness конвертируем в Smoothness (инверсия) для Alpha канала
-                    float roughnessValue = roughnessPixel.grayscale;
-                    float smoothnessValue = 1.0f - roughnessValue;
-
-                    // Создаем финальный пиксель: Metallic в RGB, Smoothness в Alpha
-                    Color finalPixel = new Color(metallicValue, metallicValue, metallicValue, smoothnessValue);
-                    urpTexture.SetPixel(x, y, finalPixel);
-                }
-            }
-
-            urpTexture.Apply();
-
-            // Сохраняем текстуру
-            byte[] pngData = urpTexture.EncodeToPNG();
-            System.IO.File.WriteAllBytes(urpPath.Replace("Assets/", Application.dataPath + "/").Replace("Assets\\", Application.dataPath + "\\"), pngData);
-            
-            AssetDatabase.Refresh();
-            
-            // Настраиваем импорт для URP текстуры
-            TextureImporter urpImporter = AssetImporter.GetAtPath(urpPath) as TextureImporter;
-            if (urpImporter != null)
-            {
-                urpImporter.sRGBTexture = false; // Linear для metallic/smoothness
-                urpImporter.SaveAndReimport();
-            }
-
-            Debug.Log($"Создана URP текстура: {objectName}_{resolution}_urp.png (Metallic RGB + Smoothness Alpha)");
-            
-            // Очищаем память
-            DestroyImmediate(urpTexture);
+            Debug.Log($"Настроена URP текстура: {objectName}_{resolution}_urp.png (Linear)");
         }
         else
         {
-            Debug.LogWarning($"Не удалось найти Metallic или Roughness текстуры {resolution} для создания URP текстуры");
+            Debug.LogWarning($"Не удалось найти URP текстуру {resolution}: {urpPath}");
         }
     }
 
@@ -406,11 +361,11 @@ public class ModelDownloader : EditorWindow
         }
     }
 
-    private void SetupVRayCamTexture()
+    private void SetupIconTexture()
     {
-        string vrayCamPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_100k_VRayCam001_view.jpg";
+        string iconPath = $"Assets/Meshes/{objectName}/{objectName}_100k_icon.png";
         
-        TextureImporter importer = AssetImporter.GetAtPath(vrayCamPath) as TextureImporter;
+        TextureImporter importer = AssetImporter.GetAtPath(iconPath) as TextureImporter;
         if (importer != null)
         {
             // Настраиваем как Sprite
@@ -435,11 +390,11 @@ public class ModelDownloader : EditorWindow
             // Применяем изменения
             importer.SaveAndReimport();
             
-            Debug.Log($"VRay камера настроена как Sprite 512x512: {objectName}_100k_VRayCam001_view.jpg");
+            Debug.Log($"Иконка настроена как Sprite 512x512: {objectName}_100k_icon.png");
         }
         else
         {
-            Debug.LogWarning($"Не удалось найти VRay камеру: {vrayCamPath}");
+            Debug.LogWarning($"Не удалось найти иконку: {iconPath}");
         }
     }
 
@@ -453,7 +408,7 @@ public class ModelDownloader : EditorWindow
 
     private void SetupFBXForResolution(string resolution)
     {
-        string fbxPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}.fbx";
+        string fbxPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}.fbx";
         ModelImporter importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
         
         if (importer != null)
@@ -518,16 +473,16 @@ public class ModelDownloader : EditorWindow
 
     private void CreateAndAssignMaterialForResolution(string resolution)
     {
-        string materialPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}.mat";
+        string materialPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}.mat";
         
         // Создаем материал со стандартным URP Lit шейдером
         Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         material.name = $"{objectName}_{resolution}";
 
         // Загружаем текстуры для конкретной детализации
-        string texturePath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}_texture.png";
-        string normalPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}_normal.png";
-        string urpPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}_urp.png";
+        string texturePath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}_texture.png";
+        string normalPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}_normal.png";
+        string urpPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}_urp.png";
 
         Texture2D albedoTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
         Texture2D normalTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
@@ -567,7 +522,7 @@ public class ModelDownloader : EditorWindow
 
     private void AssignMaterialToMeshForResolution(string materialPath, string resolution)
     {
-        string fbxPath = $"Assets/Resources/Meshes/{objectName}/{objectName}_{resolution}.fbx";
+        string fbxPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}.fbx";
         Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
 
         if (material != null)

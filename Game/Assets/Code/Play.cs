@@ -16,7 +16,19 @@ public class Play : MonoBehaviour
     [SerializeField] public Camera _cam;
     [SerializeField] public Creator _creator;
     
-    public State currentState = State.Create;
+    private State _currentState = State.Create;
+    public State currentState
+    {
+        get
+        {
+            return _currentState;
+        }
+        set
+        {
+            _currentState = value;
+            OnPlayStateChange?.Invoke(_currentState);
+        }
+    }
 
     public static event Action<State> OnPlayStateChange;
     private bool isSimulationActive = false;
@@ -52,25 +64,30 @@ public class Play : MonoBehaviour
         }
     }
 
-    public void TogglePlayMode()
+public void TogglePlayMode()
+{
+    var spawner = FindFirstObjectByType<MachineSpawnClient>();
+
+    if (currentState == State.Create)
     {
-        if (currentState == State.Create)
-        {
-            // Переключаемся в режим симуляции
-            currentState = State.SimulateLocal;
-            CreateHull(); 
-            Debug.Log("Switched to simulation mode");
-            OnPlayStateChange?.Invoke(currentState);
-        }
-        else
-        {
-            // Возвращаемся в режим создания
-            currentState = State.Create;
-            ResetHull(); 
-            Debug.Log("Switched to creation mode");
-            OnPlayStateChange?.Invoke(currentState);
-        }
+        // → сет. симуляция
+        currentState = State.SimulateOnline;
+        if (spawner) spawner.RequestSpawnFromCreator();
+        Debug.Log("Switched to simulation mode");
+        OnPlayStateChange?.Invoke(currentState);
     }
+    else
+    {
+        // → обратно в конструктор: удаляем свою машину и возвращаем конструктор
+        if (spawner) spawner.RequestDespawnOwnedMachine();
+
+        currentState = State.Create;
+        ResetHull();
+        Debug.Log("Switched to creation mode");
+        OnPlayStateChange?.Invoke(currentState);
+    }
+}
+
     
      
     
@@ -93,27 +110,22 @@ public class Play : MonoBehaviour
         }
     }
     
-    void CreateHull()
+    void CreateMachine()
     {
         if (_creator != null && _creator.cells.Count > 0)
         {
-            isSimulationActive = true;
             
-            // Убираем текущую клетку в небо, чтобы она не мешала
-            if (_creator.current_prefab != null)
-            {
-                _creator.current_prefab.transform.position = new Vector3(0, 100, 0);
-                _creator.current_prefab.target_world_position = new Vector3(0, 100, 0);
-                Debug.Log("Current cell moved to sky");
-            }
 
-            foreach (var cell in _creator.cells)
-            {
-                cell.TurnColliders(true);
-                
-                cell.targetRigidbody.isKinematic = false;
-                cell.targetRigidbody.useGravity = true;
-            }
+
+
+
+
+
+
+
+
+            isSimulationActive = true;
+           
         }
     }
     

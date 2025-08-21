@@ -119,8 +119,8 @@ public class GameHTTPClient : MonoBehaviour
     
     private void Start()
     {
-        Debug.Log("<color=green>GameHTTPClient: Starting up...</color>");
-        Debug.Log($"<color=green>GameHTTPClient: Server URL set to {serverURL}</color>");
+        //Debug.Log("<color=green>GameHTTPClient: Starting up...</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: Server URL set to {serverURL}</color>");
         
         // Проверяем сохраненные данные пользователя
         CheckSavedUserData();
@@ -129,7 +129,7 @@ public class GameHTTPClient : MonoBehaviour
     private void CheckSavedUserData()
     {
         bool isRegistered = PlayerPrefs.GetInt("isRegistered", 0) == 1;
-        Debug.Log($"<color=green>GameHTTPClient: isRegistered = {isRegistered}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: isRegistered = {isRegistered}</color>");
         
         if (isRegistered)
         {
@@ -138,24 +138,24 @@ public class GameHTTPClient : MonoBehaviour
             string savedUserId = PlayerPrefs.GetString("userId", "");
             string savedNickname = PlayerPrefs.GetString("userNickname", "");
             
-                    Debug.Log($"<color=green>GameHTTPClient: Found saved email: {savedEmail}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: Found saved userId: {savedUserId}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: Found saved nickname: {savedNickname}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: Found saved email: {savedEmail}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: Found saved userId: {savedUserId}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: Found saved nickname: {savedNickname}</color>");
             
             if (!string.IsNullOrEmpty(savedEmail) && !string.IsNullOrEmpty(savedPassword))
             {
-                Debug.Log("GameHTTPClient: Found saved credentials, attempting login...");
+                //Debug.Log("GameHTTPClient: Found saved credentials, attempting login...");
                 StartCoroutine(LoginUser(savedEmail, savedPassword));
             }
             else
             {
-                Debug.Log("GameHTTPClient: No saved credentials found, need to register");
+                //Debug.Log("GameHTTPClient: No saved credentials found, need to register");
                 StartRegistrationProcess();
             }
         }
         else
         {
-            Debug.Log("GameHTTPClient: User not registered, starting registration process");
+            //Debug.Log("GameHTTPClient: User not registered, starting registration process");
             StartRegistrationProcess();
         }
     }
@@ -167,13 +167,13 @@ public class GameHTTPClient : MonoBehaviour
         string randomPassword = "pass_" + UnityEngine.Random.Range(100000, 999999);
         string randomNickname = "Player_" + UnityEngine.Random.Range(1000, 9999);
         
-        Debug.Log($"GameHTTPClient: Registering new user: {randomEmail}");
+        //Debug.Log($"GameHTTPClient: Registering new user: {randomEmail}");
         StartCoroutine(RegisterUser(randomEmail, randomPassword, randomNickname));
     }
     
     public IEnumerator RegisterUser(string email, string password, string nickname)
     {
-        Debug.Log($"GameHTTPClient: Starting registration for {email}");
+        //Debug.Log($"GameHTTPClient: Starting registration for {email}");
         
         RegisterRequest registerData = new RegisterRequest
         {
@@ -183,8 +183,8 @@ public class GameHTTPClient : MonoBehaviour
         };
         
         string jsonData = JsonUtility.ToJson(registerData);
-        Debug.Log($"GameHTTPClient: Sending registration request to {serverURL}/api-game-user/register");
-        Debug.Log($"GameHTTPClient: Request data: {jsonData}");
+        //Debug.Log($"GameHTTPClient: Sending registration request to {serverURL}/api-game-user/register");
+        //Debug.Log($"GameHTTPClient: Request data: {jsonData}");
         
         using (UnityWebRequest request = new UnityWebRequest($"{serverURL}/api-game-user/register", "POST"))
         {
@@ -193,12 +193,12 @@ public class GameHTTPClient : MonoBehaviour
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
             
-            Debug.Log("GameHTTPClient: Sending web request...");
+            //Debug.Log("GameHTTPClient: Sending web request...");
             yield return request.SendWebRequest();
             
-            Debug.Log($"GameHTTPClient: Request completed. Result: {request.result}");
-            Debug.Log($"GameHTTPClient: Response code: {request.responseCode}");
-            Debug.Log($"GameHTTPClient: Response text: {request.downloadHandler.text}");
+            //Debug.Log($"GameHTTPClient: Request completed. Result: {request.result}");
+            //Debug.Log($"GameHTTPClient: Response code: {request.responseCode}");
+            //Debug.Log($"GameHTTPClient: Response text: {request.downloadHandler.text}");
             
             if (request.result == UnityWebRequest.Result.Success)
             {
@@ -206,18 +206,18 @@ public class GameHTTPClient : MonoBehaviour
                 
                 if (response.status == "success")
                 {
-                    Debug.Log($"<color=green>GameHTTPClient: User registered successfully: {response.player_id}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: Registration response: {request.downloadHandler.text}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.player_id = '{response.player_id}'</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.player_id is null: {response.player_id == null}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.player_id is empty: {string.IsNullOrEmpty(response.player_id)}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.nick_name = '{response.nick_name}'</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.user = {(response.user != null ? "not null" : "null")}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: User registered successfully: {response.player_id}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: Registration response: {request.downloadHandler.text}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.player_id = '{response.player_id}'</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.player_id is null: {response.player_id == null}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.player_id is empty: {string.IsNullOrEmpty(response.player_id)}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.nick_name = '{response.nick_name}'</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.user = {(response.user != null ? "not null" : "null")}</color>");
                     if (response.user != null)
                     {
-                        Debug.Log($"<color=green>GameHTTPClient: response.user.user_id = '{response.user.user_id}'</color>");
-                        Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is null: {response.user.user_id == null}</color>");
-                        Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is empty: {string.IsNullOrEmpty(response.user.user_id)}</color>");
+                        //Debug.Log($"<color=green>GameHTTPClient: response.user.user_id = '{response.user.user_id}'</color>");
+                        //Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is null: {response.user.user_id == null}</color>");
+                        //Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is empty: {string.IsNullOrEmpty(response.user.user_id)}</color>");
                     }
                     
                     // Авторизуемся
@@ -225,7 +225,7 @@ public class GameHTTPClient : MonoBehaviour
                     if (string.IsNullOrEmpty(userIdToUse) && response.user != null)
                     {
                         userIdToUse = response.user.user_id;
-                        Debug.Log($"GameHTTPClient: Using response.user.user_id for currentUserId: {userIdToUse}");
+                        //Debug.Log($"GameHTTPClient: Using response.user.user_id for currentUserId: {userIdToUse}");
                     }
                     
                     currentUserId = userIdToUse;
@@ -240,7 +240,7 @@ public class GameHTTPClient : MonoBehaviour
                     PlayerPrefs.SetString("userNickname", response.nick_name);
                     PlayerPrefs.Save();
                     
-                    Debug.Log($"<color=green>GameHTTPClient: Set currentUserId to: '{currentUserId}'</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: Set currentUserId to: '{currentUserId}'</color>");
                     
                     OnUserLoggedIn?.Invoke(response.user);
                     OnConnectionStatusChanged?.Invoke(true);
@@ -250,7 +250,7 @@ public class GameHTTPClient : MonoBehaviour
                     if (string.IsNullOrEmpty(playerIdToUse) && response.user != null)
                     {
                         playerIdToUse = response.user.user_id;
-                        Debug.Log($"GameHTTPClient: Using response.user.user_id instead: {playerIdToUse}");
+                        //Debug.Log($"GameHTTPClient: Using response.user.user_id instead: {playerIdToUse}");
                     }
                     
                     if (!string.IsNullOrEmpty(playerIdToUse))
@@ -268,7 +268,7 @@ public class GameHTTPClient : MonoBehaviour
                 else
                 {
                     Debug.LogError($"Registration failed: {response.message}");
-                    Debug.Log("GameHTTPClient: Registration failed, setting disconnected status");
+                    //Debug.Log("GameHTTPClient: Registration failed, setting disconnected status");
                     OnConnectionStatusChanged?.Invoke(false);
                 }
             }
@@ -279,7 +279,7 @@ public class GameHTTPClient : MonoBehaviour
                 OnConnectionStatusChanged?.Invoke(false);
                 
                 // НЕ пытаемся снова автоматически, чтобы избежать бесконечного цикла
-                Debug.Log("GameHTTPClient: Registration failed, will not retry automatically");
+                //Debug.Log("GameHTTPClient: Registration failed, will not retry automatically");
             }
         }
     }
@@ -309,32 +309,32 @@ public class GameHTTPClient : MonoBehaviour
                 
                 if (response.status == "success")
                 {
-                    Debug.Log($"<color=green>GameHTTPClient: User logged in successfully: {response.player_id}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: Login response: {request.downloadHandler.text}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.player_id = '{response.player_id}'</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.player_id is null: {response.player_id == null}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.player_id is empty: {string.IsNullOrEmpty(response.player_id)}</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.nick_name = '{response.nick_name}'</color>");
-                    Debug.Log($"<color=green>GameHTTPClient: response.user = {(response.user != null ? "not null" : "null")}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: User logged in successfully: {response.player_id}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: Login response: {request.downloadHandler.text}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.player_id = '{response.player_id}'</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.player_id is null: {response.player_id == null}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.player_id is empty: {string.IsNullOrEmpty(response.player_id)}</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.nick_name = '{response.nick_name}'</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: response.user = {(response.user != null ? "not null" : "null")}</color>");
                     if (response.user != null)
                     {
-                        Debug.Log($"<color=green>GameHTTPClient: response.user.user_id = '{response.user.user_id}'</color>");
-                        Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is null: {response.user.user_id == null}</color>");
-                        Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is empty: {string.IsNullOrEmpty(response.user.user_id)}</color>");
+                        //Debug.Log($"<color=green>GameHTTPClient: response.user.user_id = '{response.user.user_id}'</color>");
+                        //Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is null: {response.user.user_id == null}</color>");
+                        //Debug.Log($"<color=green>GameHTTPClient: response.user.user_id is empty: {string.IsNullOrEmpty(response.user.user_id)}</color>");
                     }
                     
                     string userIdToUse = response.player_id;
                     if (string.IsNullOrEmpty(userIdToUse) && response.user != null)
                     {
                         userIdToUse = response.user.user_id;
-                        Debug.Log($"GameHTTPClient: Using response.user.user_id for currentUserId: {userIdToUse}");
+                        //Debug.Log($"GameHTTPClient: Using response.user.user_id for currentUserId: {userIdToUse}");
                     }
                     
                     currentUserId = userIdToUse;
                     currentUserNickname = response.nick_name;
                     isLoggedIn = true;
                     
-                    Debug.Log($"<color=green>GameHTTPClient: Set currentUserId to: '{currentUserId}'</color>");
+                    //Debug.Log($"<color=green>GameHTTPClient: Set currentUserId to: '{currentUserId}'</color>");
                     
                     OnUserLoggedIn?.Invoke(response.user);
                     OnConnectionStatusChanged?.Invoke(true);
@@ -349,7 +349,7 @@ public class GameHTTPClient : MonoBehaviour
                     if (string.IsNullOrEmpty(playerIdToUse) && response.user != null)
                     {
                         playerIdToUse = response.user.user_id;
-                        Debug.Log($"GameHTTPClient: Using response.user.user_id instead: {playerIdToUse}");
+                        //Debug.Log($"GameHTTPClient: Using response.user.user_id instead: {playerIdToUse}");
                     }
                     
                     if (!string.IsNullOrEmpty(playerIdToUse))
@@ -377,7 +377,7 @@ public class GameHTTPClient : MonoBehaviour
                 OnConnectionStatusChanged?.Invoke(false);
                 
                 // Если логин не удался, попробуем зарегистрироваться заново
-                Debug.Log("GameHTTPClient: Login failed, trying to register new user...");
+                //Debug.Log("GameHTTPClient: Login failed, trying to register new user...");
                 StartRegistrationProcess();
             }
         }
@@ -414,8 +414,8 @@ public class GameHTTPClient : MonoBehaviour
                 
                 if (response.status == "success")
                 {
-                    Debug.Log("Message sent successfully");
-                    Debug.Log($"Response message: {JsonUtility.ToJson(response.message)}");
+                    //Debug.Log("Message sent successfully");
+                    //Debug.Log($"Response message: {JsonUtility.ToJson(response.message)}");
                     OnNewChatMessage?.Invoke(response.message);
                 }
                 else
@@ -431,7 +431,7 @@ public class GameHTTPClient : MonoBehaviour
                 // Если не удалось отправить сообщение, возможно потеряли соединение
                 if (request.responseCode == 0)
                 {
-                    Debug.Log("GameHTTPClient: Connection lost during message send, trying to reconnect...");
+                    //Debug.Log("GameHTTPClient: Connection lost during message send, trying to reconnect...");
                     OnConnectionStatusChanged?.Invoke(false);
                 }
             }
@@ -469,7 +469,7 @@ public class GameHTTPClient : MonoBehaviour
                 
                 if (response.status == "success")
                 {
-                    Debug.Log("System message sent successfully");
+                    //Debug.Log("System message sent successfully");
                 }
                 else
                 {
@@ -481,7 +481,7 @@ public class GameHTTPClient : MonoBehaviour
                 // Не считаем ошибку 404 критичной - пользователь мог быть удален
                 if (request.responseCode == 404)
                 {
-                    Debug.Log("GameHTTPClient: User not found when sending system message (probably already logged out)");
+                    //Debug.Log("GameHTTPClient: User not found when sending system message (probably already logged out)");
                 }
                 else
                 {
@@ -499,12 +499,12 @@ public class GameHTTPClient : MonoBehaviour
             
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"GameHTTPClient: GetChatMessages response: {request.downloadHandler.text}");
+             //   //Debug.Log($"GameHTTPClient: GetChatMessages response: {request.downloadHandler.text}");
                 ChatResponse response = JsonUtility.FromJson<ChatResponse>(request.downloadHandler.text);
                 
                 if (response.status == "success")
                 {
-                    Debug.Log($"GameHTTPClient: Received {response.messages?.Count ?? 0} messages");
+              //      //Debug.Log($"GameHTTPClient: Received {response.messages?.Count ?? 0} messages");
                     OnChatMessagesReceived?.Invoke(response.messages);
                 }
                 else
@@ -521,7 +521,7 @@ public class GameHTTPClient : MonoBehaviour
     
     public IEnumerator GetOnlineCount()
     {
-        Debug.Log("GameHTTPClient: Requesting online count...");
+//        //Debug.Log("GameHTTPClient: Requesting online count...");
         
         using (UnityWebRequest request = UnityWebRequest.Get($"{serverURL}/api-game-chat/online_count"))
         {
@@ -529,12 +529,12 @@ public class GameHTTPClient : MonoBehaviour
             
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"GameHTTPClient: GetOnlineCount response: {request.downloadHandler.text}");
+             //   //Debug.Log($"GameHTTPClient: GetOnlineCount response: {request.downloadHandler.text}");
                 ChatResponse response = JsonUtility.FromJson<ChatResponse>(request.downloadHandler.text);
                 
                 if (response.status == "success")
                 {
-                    Debug.Log($"GameHTTPClient: Online count: {response.online_count}");
+               //     //Debug.Log($"GameHTTPClient: Online count: {response.online_count}");
                     OnOnlineCountUpdate?.Invoke(response.online_count);
                 }
                 else
@@ -559,12 +559,12 @@ public class GameHTTPClient : MonoBehaviour
             yield break;
         }
         
-        Debug.Log($"GameHTTPClient: Attempting to join lobby with playerId: {playerId}");
+     //   //Debug.Log($"GameHTTPClient: Attempting to join lobby with playerId: {playerId}");
         
         JoinLobbyRequest requestData = new JoinLobbyRequest { player_id = playerId };
         string jsonData = JsonUtility.ToJson(requestData);
-        Debug.Log($"<color=green>GameHTTPClient: JoinLobby JSON data: {jsonData}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: JoinLobby JSON data length: {jsonData?.Length ?? 0}</color>");
+    //    //Debug.Log($"<color=green>GameHTTPClient: JoinLobby JSON data: {jsonData}</color>");
+    //    //Debug.Log($"<color=green>GameHTTPClient: JoinLobby JSON data length: {jsonData?.Length ?? 0}</color>");
         
         using (UnityWebRequest request = new UnityWebRequest($"{serverURL}/api-game-lobby/join", "POST"))
         {
@@ -577,8 +577,8 @@ public class GameHTTPClient : MonoBehaviour
             
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log("GameHTTPClient: Successfully joined lobby");
-                Debug.Log($"GameHTTPClient: Join lobby response: {request.downloadHandler.text}");
+   //             //Debug.Log("GameHTTPClient: Successfully joined lobby");
+                //Debug.Log($"GameHTTPClient: Join lobby response: {request.downloadHandler.text}");
                 
                 // После успешного присоединения к лобби обновляем счетчик онлайн
                 StartCoroutine(GetOnlineCount());
@@ -608,14 +608,14 @@ public class GameHTTPClient : MonoBehaviour
             
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log("GameHTTPClient: Successfully left lobby");
+                //Debug.Log("GameHTTPClient: Successfully left lobby");
             }
             else
             {
                 // Не считаем ошибку 404 критичной - пользователь мог уже покинуть лобби
                 if (request.responseCode == 404)
                 {
-                    Debug.Log("GameHTTPClient: User already left lobby or was not in lobby");
+                    //Debug.Log("GameHTTPClient: User already left lobby or was not in lobby");
                 }
                 else
                 {
@@ -629,7 +629,7 @@ public class GameHTTPClient : MonoBehaviour
     {
         if (!isLoggedIn)
         {
-            Debug.Log("GameHTTPClient: Cannot send heartbeat - not logged in");
+            //Debug.Log("GameHTTPClient: Cannot send heartbeat - not logged in");
             yield break;
         }
         
@@ -639,16 +639,16 @@ public class GameHTTPClient : MonoBehaviour
             yield break;
         }
         
-        Debug.Log($"<color=green>GameHTTPClient: SendHeartbeat - isLoggedIn={isLoggedIn}, currentUserId='{currentUserId}'</color>");
-        Debug.Log($"<color=green>GameHTTPClient: currentUserId length: {currentUserId?.Length ?? 0}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: currentUserId is null: {currentUserId == null}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: currentUserId is empty: {string.IsNullOrEmpty(currentUserId)}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: SendHeartbeat - isLoggedIn={isLoggedIn}, currentUserId='{currentUserId}'</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: currentUserId length: {currentUserId?.Length ?? 0}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: currentUserId is null: {currentUserId == null}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: currentUserId is empty: {string.IsNullOrEmpty(currentUserId)}</color>");
             
         HeartbeatRequest requestData = new HeartbeatRequest { user_id = currentUserId };
         string jsonData = JsonUtility.ToJson(requestData);
-        Debug.Log($"<color=green>GameHTTPClient: Sending heartbeat for user {currentUserId}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: Heartbeat JSON data: {jsonData}</color>");
-        Debug.Log($"<color=green>GameHTTPClient: JSON data length: {jsonData?.Length ?? 0}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: Sending heartbeat for user {currentUserId}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: Heartbeat JSON data: {jsonData}</color>");
+        //Debug.Log($"<color=green>GameHTTPClient: JSON data length: {jsonData?.Length ?? 0}</color>");
         
         using (UnityWebRequest request = new UnityWebRequest($"{serverURL}/api-game-chat/heartbeat", "POST"))
         {
@@ -661,7 +661,7 @@ public class GameHTTPClient : MonoBehaviour
             
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"<color=green>GameHTTPClient: Heartbeat sent successfully. Response: {request.downloadHandler.text}</color>");
+                //Debug.Log($"<color=green>GameHTTPClient: Heartbeat sent successfully. Response: {request.downloadHandler.text}</color>");
                 
                 // После успешного heartbeat обновляем счетчик онлайн
                 StartCoroutine(GetOnlineCount());
@@ -675,7 +675,7 @@ public class GameHTTPClient : MonoBehaviour
                 // Если heartbeat не удался, возможно потеряли соединение
                 if (request.responseCode == 0)
                 {
-                    Debug.Log("GameHTTPClient: Connection lost during heartbeat, attempting reconnect...");
+                    //Debug.Log("GameHTTPClient: Connection lost during heartbeat, attempting reconnect...");
                     OnConnectionStatusChanged?.Invoke(false);
                     
                     // Попробуем переподключиться
@@ -691,7 +691,7 @@ public class GameHTTPClient : MonoBehaviour
     
     public IEnumerator AttemptReconnect()
     {
-        Debug.Log("GameHTTPClient: Attempting to reconnect...");
+        //Debug.Log("GameHTTPClient: Attempting to reconnect...");
         
         // Ждем немного перед попыткой переподключения
         yield return new WaitForSeconds(5f);
@@ -705,26 +705,26 @@ public class GameHTTPClient : MonoBehaviour
             string savedPassword = PlayerPrefs.GetString("userPassword", "");
             string savedUserId = PlayerPrefs.GetString("userId", "");
             
-            Debug.Log($"GameHTTPClient: AttemptReconnect - savedUserId: {savedUserId}");
+            //Debug.Log($"GameHTTPClient: AttemptReconnect - savedUserId: {savedUserId}");
             
             if (!string.IsNullOrEmpty(savedEmail) && !string.IsNullOrEmpty(savedPassword))
             {
-                Debug.Log("GameHTTPClient: Attempting to reconnect with saved credentials...");
+                //Debug.Log("GameHTTPClient: Attempting to reconnect with saved credentials...");
                 StartCoroutine(LoginUser(savedEmail, savedPassword));
             }
             else
             {
-                Debug.Log("GameHTTPClient: No saved credentials for reconnect");
+                //Debug.Log("GameHTTPClient: No saved credentials for reconnect");
             }
         }
     }
     
     public void LogoutUser()
     {
-        Debug.Log("GameHTTPClient: LogoutUser called");
+        //Debug.Log("GameHTTPClient: LogoutUser called");
         if (isLoggedIn)
         {
-            Debug.Log($"GameHTTPClient: Logging out user {currentUserNickname}");
+            //Debug.Log($"GameHTTPClient: Logging out user {currentUserNickname}");
             
             // Отправляем системное сообщение и покидаем лобби без ожидания
             StartCoroutine(SendSystemMessage($"{currentUserNickname} покинул чат"));
@@ -739,7 +739,7 @@ public class GameHTTPClient : MonoBehaviour
         }
         else
         {
-            Debug.Log("GameHTTPClient: LogoutUser called but user not logged in");
+            //Debug.Log("GameHTTPClient: LogoutUser called but user not logged in");
         }
     }
     
@@ -749,20 +749,20 @@ public class GameHTTPClient : MonoBehaviour
     
     private void OnApplicationPause(bool pauseStatus)
     {
-        Debug.Log($"GameHTTPClient: OnApplicationPause called with pauseStatus={pauseStatus}");
+        //Debug.Log($"GameHTTPClient: OnApplicationPause called with pauseStatus={pauseStatus}");
         
         // На мобильных устройствах используем OnApplicationPause вместо OnApplicationFocus
         #if UNITY_ANDROID || UNITY_IOS
         if (pauseStatus && isLoggedIn)
         {
-            Debug.Log("GameHTTPClient: App paused on mobile, starting logout timer");
+            //Debug.Log("GameHTTPClient: App paused on mobile, starting logout timer");
             if (logoutCoroutine != null)
                 StopCoroutine(logoutCoroutine);
             logoutCoroutine = StartCoroutine(DelayedLogout());
         }
         else if (!pauseStatus && isLoggedIn)
         {
-            Debug.Log("GameHTTPClient: App resumed on mobile, cancelling logout");
+            //Debug.Log("GameHTTPClient: App resumed on mobile, cancelling logout");
             if (logoutCoroutine != null)
             {
                 StopCoroutine(logoutCoroutine);
@@ -774,7 +774,7 @@ public class GameHTTPClient : MonoBehaviour
     
     private void OnApplicationFocus(bool hasFocus)
     {
-        Debug.Log($"GameHTTPClient: OnApplicationFocus called with hasFocus={hasFocus}");
+        //Debug.Log($"GameHTTPClient: OnApplicationFocus called with hasFocus={hasFocus}");
         
         // В Editor НЕ отключаемся вообще
         #if UNITY_EDITOR
@@ -786,14 +786,14 @@ public class GameHTTPClient : MonoBehaviour
         if (!hasFocus && isLoggedIn)
         {
             lastFocusLostTime = Time.time;
-            Debug.Log("GameHTTPClient: Focus lost, starting logout timer");
+            //Debug.Log("GameHTTPClient: Focus lost, starting logout timer");
             if (logoutCoroutine != null)
                 StopCoroutine(logoutCoroutine);
             logoutCoroutine = StartCoroutine(DelayedLogout());
         }
         else if (hasFocus && logoutCoroutine != null)
         {
-            Debug.Log("GameHTTPClient: Focus regained, cancelling logout");
+            //Debug.Log("GameHTTPClient: Focus regained, cancelling logout");
             StopCoroutine(logoutCoroutine);
             logoutCoroutine = null;
         }
@@ -802,12 +802,12 @@ public class GameHTTPClient : MonoBehaviour
     
     private IEnumerator DelayedLogout()
     {
-        Debug.Log($"GameHTTPClient: Starting {FOCUS_LOGOUT_DELAY} second logout timer");
+        //Debug.Log($"GameHTTPClient: Starting {FOCUS_LOGOUT_DELAY} second logout timer");
         yield return new WaitForSeconds(FOCUS_LOGOUT_DELAY);
         
         if (isLoggedIn)
         {
-            Debug.Log("GameHTTPClient: Logout timer expired, disconnecting user");
+            //Debug.Log("GameHTTPClient: Logout timer expired, disconnecting user");
             LogoutUser();
         }
     }

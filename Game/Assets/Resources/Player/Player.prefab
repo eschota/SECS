@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8455619407274543524}
   - component: {fileID: 5832164795553439305}
   - component: {fileID: 5407384906981163640}
+  - component: {fileID: 5860354571765062322}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -53,6 +54,8 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 5832164795553439305}
+  - {fileID: 5407384906981163640}
+  - {fileID: 5860354571765062322}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &5832164795553439305
 MonoBehaviour:
@@ -86,6 +89,25 @@ MonoBehaviour:
   meshRenderers: []
   skinnedMeshRenderers: []
   playerColor: {r: 0, g: 0, b: 0, a: 0}
+--- !u!114 &5860354571765062322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3150848344794404651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1f68a5bb8bddeb4db9032b1cd64ffba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  machinePrefab: {fileID: 8625815941639673699, guid: b44085ae50696e04787675ce01556a11, type: 3}
+  creator: {fileID: 0}
+  anchorRadius: 30
+  maxSpiralTries: 80
+  spiralStep: 4
+  avoidOriginRadius: 10
+  playerAuraPadding: 5
 --- !u!1 &6734666851054400283
 GameObject:
   m_ObjectHideFlags: 0
