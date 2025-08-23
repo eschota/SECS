@@ -165,30 +165,7 @@ public void TogglePlayMode()
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha5))
-        {
-            SetAllCellsStatus(io_base.io_base_status.Selected);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha6))
-        {
-            SetAllCellsStatus(io_base.io_base_status.Hovered);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha7))
-        {
-            SetAllCellsStatus(io_base.io_base_status.Dragging);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha8))
-        {
-            SetAllCellsStatus(io_base.io_base_status.Placing);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha9))
-        {
-            SetAllCellsStatus(io_base.io_base_status.Physics);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha0))
-        {
-            SetAllCellsStatus(io_base.io_base_status.PhysicsToTargetPositions);
-        }
+     
     }
 
     void SetAllCellsStatus(io_base.io_base_status newStatus)

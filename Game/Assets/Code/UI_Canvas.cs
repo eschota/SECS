@@ -59,7 +59,7 @@ public class UI_Canvas : MonoBehaviour
         i = this;
 
         // Expect items under Assets/Resources/items_serialized/{0..4}
-        const int foldersCount = 5;
+        int foldersCount = Types_Buttons.Count;
 
         // Initialize selected buttons tracking
         selectedSubButtons = new UI_Button[foldersCount];
@@ -117,10 +117,31 @@ public class UI_Canvas : MonoBehaviour
     }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.G))
+        if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-
+            SelectTypeButton(Types_Buttons[0]);
         }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            SelectTypeButton(Types_Buttons[1]);
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            SelectTypeButton(Types_Buttons[2]);
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            SelectTypeButton(Types_Buttons[3]);
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha5))
+        {
+            SelectTypeButton(Types_Buttons[4]);
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha6))
+        {
+            SelectTypeButton(Types_Buttons[5]);
+        }
+        
     }
     private void BuildButtonsForSub(RectTransform sub, int folderIndex)
     {
@@ -266,10 +287,9 @@ public class UI_Canvas : MonoBehaviour
         {
             ResetButtonColor(selectedTypeButton);
             SetToggleState(selectedTypeButton, false);
-        }
-
-        // Set new selection
+        }       
         selectedTypeButton = button;
+        ChangeCreateSub(button.subGroupIndex);
         SetButtonColor(button, target_Normal_Color_forTypes);
          
                 if(selectedSubButtons[button.subGroupIndex] != null)

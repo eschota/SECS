@@ -59,7 +59,8 @@ public class Creator : MonoBehaviour
     [SerializeField] private List<Material> _materials = new List<Material>();
     public bool SnapGrid = true;
     private io_base _current_prefab;
-    public io_base current_prefab_to_chabge; 
+    public io_base current_prefab_to_chabge;
+    private int lastYawSteps = 0; // Запоминаем последний Yaw у созданной клетки 
     public io_base current_prefab
     {
         get
@@ -84,6 +85,7 @@ public class Creator : MonoBehaviour
                 _current_prefab = a;
                 _current_prefab.transform.position = _cam.target_pivot_position;
                 _current_prefab.target_world_position = _cam.target_pivot_position;
+                _current_prefab.yawSteps = lastYawSteps; // Применяем последний Yaw
                 _current_prefab.target_world_rotation = Quaternion.identity;
                 _current_prefab.transform.localScale=Vector3.one*0.01f;
                 _current_prefab.name = "Current Create";
@@ -136,6 +138,10 @@ public class Creator : MonoBehaviour
 
                 // Смещаем пивот к точке создания клетки
                 _cam.target_pivot_position = current_prefab.transform.position;
+                
+                // Сохраняем текущий Yaw для следующей клетки
+                lastYawSteps = current_prefab.yawSteps;
+
                 current_prefab.Status = io_base.io_base_status.Placing;
                 current_prefab = null;
             }
@@ -211,7 +217,14 @@ public class Creator : MonoBehaviour
 
                     // 3) финальный поворот
                     Quaternion finalRot = alignUp * yawRot;
-                    current_prefab.target_world_rotation = finalRot;   // check intersections 
+                    
+                    // Округляем углы до кратных 90°
+                    Vector3 eulerAngles = finalRot.eulerAngles;
+                    float roundedX = Mathf.Round(eulerAngles.x / 90f) * 90f;
+                    float roundedY = Mathf.Round(eulerAngles.y / 90f) * 90f;
+                    float roundedZ = Mathf.Round(eulerAngles.z / 90f) * 90f;
+                    
+                    current_prefab.target_world_rotation = Quaternion.Euler(roundedX, roundedY, roundedZ);   // check intersections 
                     foreach (var cell in current_prefab.target_cells)
                     {
                         // Применяем поворот к локальной позиции клетки
@@ -271,12 +284,25 @@ public class Creator : MonoBehaviour
     }
     void LoadPrefabs()
     {
-        var prefabs_list = Resources.LoadAll<io_base>("Create");
-        foreach (var prefab in prefabs_list)
+        // Загружаем все item_SO из папки Items_serialized включая подпапки
+        var items_list = Resources.LoadAll<item_SO>("Items_serialized");
+        
+        // Извлекаем prefab из каждого item_SO и добавляем в список
+        foreach (var item in items_list)
         {
-            prefabs.Add(prefab);
+            if (item.prefab != null)
+            {
+                prefabs.Add(item.prefab);
+            }
         }
-        current_prefab_to_chabge = prefabs[0];
+        
+        // Сортируем префабы
+         
+        // Устанавливаем первый префаб как текущий
+        if (prefabs.Count > 0)
+        {
+            current_prefab_to_chabge = prefabs[0];
+        }
     }
     void CreateCameraWitPivot()
     {
