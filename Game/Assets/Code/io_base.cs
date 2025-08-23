@@ -23,12 +23,13 @@ public class io_base : MonoBehaviour
         Intersected = 12
     }
 
+    [SerializeField] public int yawSteps = 0;
     public List<io_base_status> status_list = new List<io_base_status>();
     [SerializeField] public int io_base_cell_type = 0;
     [SerializeField] public io_cell[] target_cells;
     [SerializeField] public Vector3 target_world_position;
     [SerializeField] public Quaternion target_world_rotation;
-
+    [SerializeField] public GeneratedModel[] generated_models = new GeneratedModel[3];
     [SerializeField] private List<io_base_SO> status_definitions = new List<io_base_SO>();
 
     [SerializeField] public Rigidbody targetRigidbody;
@@ -60,11 +61,11 @@ public class io_base : MonoBehaviour
                     {
                         foreach (var cell in target_cells)
                         {
-                            if(cell.target_mesh_renderer != null)
-                            cell.target_mesh_renderer.enabled = currentStatusSO.meshRenderer;
+                            if (cell.target_mesh_renderer != null)
+                                cell.target_mesh_renderer.enabled = currentStatusSO.meshRenderer;
                         }
                     }
-                    
+
                     if (currentStatusSO.current_shader != null)
                     {
                         foreach (var entry in cellMaterials)
@@ -106,8 +107,8 @@ public class io_base : MonoBehaviour
     {
         if (targetRigidbody == null) targetRigidbody = GetComponent<Rigidbody>();
 
-       
-        
+
+
         previousStatusSO = GetStatusSO(_status);
         if (previousStatusSO == null)
         {
@@ -174,7 +175,7 @@ public class io_base : MonoBehaviour
             cell.transform.localRotation = Quaternion.Lerp(cell.transform.localRotation, cell.target_local_rotation, curveValue);
             cell.transform.localScale = Vector3.Lerp(cell.transform.localScale, Vector3.one, curveValue);
 
-          
+
         }
     }
 
@@ -203,7 +204,7 @@ public class io_base : MonoBehaviour
         scale = Vector3.Lerp(scale, so.targetPulseLocalScale, pulseFactor);
         rot = Quaternion.Slerp(rot, so.targetPulseLocalRotation, pulseFactor);
     }
-    
+
     private io_base_SO GetStatusSO(io_base_status s)
     {
         int index = (int)s;
@@ -224,5 +225,16 @@ public class io_base : MonoBehaviour
                 cell.target_collider.enabled = value;
             }
         }
+    }
+
+    // Если нужна обратная прокрутка, можно использовать Rotate(-1)
+    public void Rotate(int delta = 1)
+    {
+        // нормализуем в диапазон 0..3
+        yawSteps = (yawSteps + delta) % 4;
+        if (yawSteps < 0) yawSteps += 4;
+
+        // перезапустим анимацию перехода статуса
+        statusTransitionTimer = 0f;
     }
 }

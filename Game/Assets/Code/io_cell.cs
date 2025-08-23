@@ -14,10 +14,13 @@ public class io_cell : MonoBehaviour
     public Vector3 target_local_position = Vector3.zero;
     void OnValidate()
     {
-        target_collider = GetComponent<Collider>(); 
-        target_transform = GetComponent<Transform>();  
-        if(target_io_base == null)
-        target_io_base = GetComponentInParent<io_base>();
+        target_collider = GetComponent<Collider>();
+        target_transform = GetComponent<Transform>();
+        if (target_collider.isTrigger == true) target_collider.isTrigger = false;
+        if (target_io_base == null)
+            target_io_base = GetComponentInParent<io_base>();
+        transform.position = new Vector3(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y), Mathf.RoundToInt(transform.position.z));
+        
     }
     void Awake()
     {
@@ -36,8 +39,9 @@ public class io_cell : MonoBehaviour
         {
             Gizmos.color = Color.red;
         }
+        transform.localPosition = new Vector3(Mathf.RoundToInt(transform.localPosition.x), Mathf.RoundToInt(transform.localPosition.y), Mathf.RoundToInt(transform.localPosition.z));
         Gizmos.color = new Color(Gizmos.color.r, Gizmos.color.g, Gizmos.color.b, 0.1f);
-        Gizmos.DrawCube(transform.position, Vector3.one);
+        Gizmos.DrawCube(transform.localPosition, Vector3.one);
     }
     // Update is called once per frame
     void Update()

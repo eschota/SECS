@@ -256,6 +256,7 @@ public void RequestDespawnOwnedMachine()
         {
             if (!cell) continue;
             if (cell.Status == io_base.io_base_status.Creating) continue;
+            if (cell.Status == io_base.io_base_status.Hidden) continue;
 
             int idx = -1;
             for (int i = 0; i < cr.prefabs.Count; i++)

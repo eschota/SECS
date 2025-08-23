@@ -29,11 +29,16 @@ public class cam : MonoBehaviour
     private bool followMachine = false;
     private Machine followedMachine;
 
+    // layer for io_base
+    private LayerMask ioBaseMask;
+
     void Awake()
     {
         _cam = Camera.main;
         baseFov = _cam.fieldOfView;
         targetFov = baseFov;
+
+        ioBaseMask = LayerMask.GetMask("io_base");
 
         CreatePivot();
         SetupCameraToFirstCell(); // стартовое поведение как раньше
@@ -59,8 +64,8 @@ public class cam : MonoBehaviour
             cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target, Time.deltaTime * speed);
         }
 
-        // конструктор: работаем как раньше
-        if (!followMachine)
+        // конструктор: работаем когда Play в Create
+        if (Play.i?.currentState == Play.State.Create)
             HandleMovement();
 
         HandleRotation();
@@ -69,7 +74,8 @@ public class cam : MonoBehaviour
 
         _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, targetFov, Time.deltaTime * speed);
 
-        if (!followMachine)
+        // конструктор: тянем pivot к target_pivot_position
+        if (Play.i?.currentState == Play.State.Create)
             cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target_pivot_position, Time.deltaTime * speed);
     }
 
@@ -81,7 +87,7 @@ public class cam : MonoBehaviour
             // вернуться к сборке
             followMachine   = false;
             followedMachine = null;
-               SetupCameraToLastCell();
+            SetupCameraToLastCell();
         }
         else
         {
@@ -97,26 +103,25 @@ public class cam : MonoBehaviour
         }
     }
 
-  private void OnLocalMachineReady(Machine m)
-{
-    if (m && m.Object.HasInputAuthority)
+    private void OnLocalMachineReady(Machine m)
     {
-        if (cameraPivot == null) CreatePivot();
+        if (m && m.Object.HasInputAuthority)
+        {
+            if (cameraPivot == null) CreatePivot();
 
-        // <<< ВОТ ЭТО: используем CenterOfMass, fallback на LocalCenter
-        Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
-                                        : m.transform.TransformPoint(m.LocalCenter);
+            // используем CenterOfMass, fallback на LocalCenter
+            Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
+                                            : m.transform.TransformPoint(m.LocalCenter);
 
-        cameraPivot.transform.position = center;
+            cameraPivot.transform.position = center;
 
-        initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
-        followedMachine = m;
-        followMachine = true;
+            initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+            followedMachine = m;
+            followMachine = true;
 
-        Debug.Log("<color=#4DA3FF>[cam]</color> attached to local machine");
+            Debug.Log("<color=#4DA3FF>[cam]</color> attached to local machine");
+        }
     }
-}
-
 
     private void TryAttachToOwnedMachine()
     {
@@ -125,21 +130,20 @@ public class cam : MonoBehaviour
             if (m && m.Object.HasInputAuthority) { AttachToMachine(m); return; }
     }
 
- private void AttachToMachine(Machine m)
-{
-    followedMachine = m;
-    followMachine = true;
+    private void AttachToMachine(Machine m)
+    {
+        followedMachine = m;
+        followMachine = true;
 
-    cameraPivot.transform.SetParent(null, true);
+        cameraPivot.transform.SetParent(null, true);
 
-    // <<< ВОТ ЭТО: используем CenterOfMass, fallback на LocalCenter
-    Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
-                                    : m.transform.TransformPoint(m.LocalCenter);
-    cameraPivot.transform.position = center;
+        // используем CenterOfMass, fallback на LocalCenter
+        Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
+                                        : m.transform.TransformPoint(m.LocalCenter);
+        cameraPivot.transform.position = center;
 
-    initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
-}
-
+        initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+    }
 
     // --- управление камерой ---
     void HandleMovement()
@@ -195,9 +199,9 @@ public class cam : MonoBehaviour
             _cam.transform.rotation = Quaternion.Euler(newX, newY, 0);
             _cam.transform.position = cameraPivot.transform.position - _cam.transform.forward * initialDistanceToPivot;
         }
-        else if (followMachine)
+        else if (Play.i?.currentState != Play.State.Create)
         {
-            // поддерживаем выбранную дистанцию
+            // поддерживаем выбранную дистанцию в симуляции
             _cam.transform.position = cameraPivot.transform.position - _cam.transform.forward * initialDistanceToPivot;
         }
     }
@@ -205,17 +209,42 @@ public class cam : MonoBehaviour
     void HandleZoom()
     {
         if (!isInitialized) return;
+
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (Mathf.Abs(scroll) > 0.01f)
         {
+            // в режиме конструктора: если луч попал ровно в текущий предпросмотр — крутим её и не зумим
+            if (Play.i?.currentState == Play.State.Create && TryRotatePreviewUnderMouse(scroll))
+                return;
+
+            // обычный зум
             targetFov -= scroll * zoomSpeed * 30f;
             targetFov = Mathf.Clamp(targetFov, minFov, maxFov);
         }
     }
 
+    /// <summary>
+    /// Если под курсором именно Creator.current_prefab — повернуть её на ±90°.
+    /// Возвращает true, если вращение выполнено (зум в этот кадр подавляем).
+    /// </summary>
+ bool TryRotatePreviewUnderMouse(float scroll)
+{
+    if (_cam == null) return false;
+    if(Creator.instance.current_prefab.Status == io_base.io_base_status.Creating
+    || Creator.instance.current_prefab.Status == io_base.io_base_status.Intersected){
+
+                    int dir = scroll > 0f ? +1 : -1;
+                    Creator.instance.current_prefab.Rotate(dir);
+                    return true;
+    }
+
+    return false;
+}
+
+
     void HandleFocusConstructor()
     {
-        if (followMachine) return;
+        if (Play.i?.currentState != Play.State.Create) return;
 
         if (Input.GetKeyDown(KeyCode.F))
         {
@@ -263,28 +292,29 @@ public class cam : MonoBehaviour
             target_pivot_position   = first.target_world_position;
             isInitialized = true;
         }
-    }void SetupCameraToLastCell()
-{
-    Creator cr = FindObjectOfType<Creator>();
-    if (cr != null && cr.cells.Count > 0)
-    {
-        io_base last = cr.cells[cr.cells.Count - 1];
-        cameraPivot.transform.position = last.target_world_position;
-
-        // не ломаем стартовую позу камеры: сохраняем world и просто подвешиваем к pivot
-        baseLocalPosition = _cam.transform.position;
-        baseLocalRotation = _cam.transform.rotation;
-
-        if (_cam.transform.parent != cameraPivot.transform)
-            _cam.transform.SetParent(cameraPivot.transform, true);
-
-        _cam.transform.localPosition = baseLocalPosition;
-        _cam.transform.localRotation = baseLocalRotation;
-
-        initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
-        target_pivot_position   = last.target_world_position;
-        isInitialized = true;
     }
-}
 
+    void SetupCameraToLastCell()
+    {
+        Creator cr = FindObjectOfType<Creator>();
+        if (cr != null && cr.cells.Count > 0)
+        {
+            io_base last = cr.cells[cr.cells.Count - 1];
+            cameraPivot.transform.position = last.target_world_position;
+
+            // не ломаем стартовую позу камеры: сохраняем world и просто подвешиваем к pivot
+            baseLocalPosition = _cam.transform.position;
+            baseLocalRotation = _cam.transform.rotation;
+
+            if (_cam.transform.parent != cameraPivot.transform)
+                _cam.transform.SetParent(cameraPivot.transform, true);
+
+            _cam.transform.localPosition = baseLocalPosition;
+            _cam.transform.localRotation = baseLocalRotation;
+
+            initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+            target_pivot_position   = last.target_world_position;
+            isInitialized = true;
+        }
+    }
 }

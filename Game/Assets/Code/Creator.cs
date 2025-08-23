@@ -40,12 +40,13 @@ public class Creator : MonoBehaviour
     void Update()
     {
         if (Play.i.currentState != Play.State.Create) return;
-        
-            
+
+
         // Проверяем состояние Play - если в режиме симуляции, не выполняем создание
         if (_play != null && _play.currentState == Play.State.Create)
         {
             CreateCell();
+            DeleteCell();
         }
     }
     public List<io_base> prefabs = new List<io_base>();
@@ -195,22 +196,22 @@ public class Creator : MonoBehaviour
 
                 if (current_prefab != null)
                 {
-                    if((targetPosition-current_prefab.target_world_position).sqrMagnitude > 0.1f)
+                    if ((targetPosition - current_prefab.target_world_position).sqrMagnitude > 0.1f)
                     {
                         current_prefab.statusTransitionTimer = 0;
                     }
 
                     current_prefab.target_world_position = targetPosition;
                     // check direction of hitNormal and rotate current_prefab to this direction
-                    Vector3 direction = hitNormal;
-                    //find cell of collider
-                    
+                    Vector3 up = hitNormal.normalized;
+                    Quaternion alignUp = Quaternion.FromToRotation(Vector3.up, up);
 
-                  
-                    current_prefab.target_world_rotation = Quaternion.LookRotation(direction);
-                    // snap to 90 degrees
-                    current_prefab.target_world_rotation = Quaternion.Euler(Mathf.Round(current_prefab.target_world_rotation.eulerAngles.x / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.y / 90) * 90, Mathf.Round(current_prefab.target_world_rotation.eulerAngles.z / 90) * 90);
-                    // check intersections 
+                    // 2) дополнительный поворот по локальной Y (yaw) кратно 90°
+                    Quaternion yawRot = Quaternion.Euler(0f, 90f * current_prefab.yawSteps, 0f);
+
+                    // 3) финальный поворот
+                    Quaternion finalRot = alignUp * yawRot;
+                    current_prefab.target_world_rotation = finalRot;   // check intersections 
                     foreach (var cell in current_prefab.target_cells)
                     {
                         // Применяем поворот к локальной позиции клетки
@@ -227,6 +228,8 @@ public class Creator : MonoBehaviour
                                     if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
                                     {
                                         current_prefab.Status = io_base.io_base_status.Intersected;
+                                        if (Input.GetKeyDown(KeyCode.R)) current_prefab.Rotate();
+
                                         return;
                                     }
                                 }
@@ -234,6 +237,7 @@ public class Creator : MonoBehaviour
                         }
                     }
                     current_prefab.Status = io_base.io_base_status.Creating;
+                    if (Input.GetKeyDown(KeyCode.R)) current_prefab.Rotate();
                 }
 
             }
@@ -250,7 +254,21 @@ public class Creator : MonoBehaviour
 
         }
     }
-
+    void DeleteCell()
+    {
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            if(Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1000, LayerMask.GetMask("io_base")))
+            {
+                if(hit.collider.gameObject.GetComponent<io_cell>().target_io_base.Status == io_base.io_base_status.Placing)
+                {
+                    SaveStateForUndo();
+                    Destroy(hit.collider.gameObject.transform.parent.gameObject);
+                }
+            }
+            
+        }
+    }
     void LoadPrefabs()
     {
         var prefabs_list = Resources.LoadAll<io_base>("Create");

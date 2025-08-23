@@ -172,7 +172,7 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 11
+  m_Intensity: 4
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -337,6 +337,8 @@ MonoBehaviour:
   - {fileID: 5863668223384983802, guid: fb068d336405b614285460d04282bb7d, type: 3}
   - {fileID: 5863668223384983802, guid: d3cf7274b034cbb4f9a38f313cb1b409, type: 3}
   - {fileID: 5863668223384983802, guid: 0a4fbadc33109cf47a6599dac9f54530, type: 3}
+  - {fileID: 5863668223384983802, guid: 0968d7c8c0a4a0e4fa40dcf8b27e8d16, type: 3}
+  - {fileID: 5863668223384983802, guid: 1a876506eb86b7c408f439279451c45b, type: 3}
   _statuses:
   - {fileID: 11400000, guid: 1c828a750d8b7f742bd2d78dce3dc5fc, type: 2}
   - {fileID: 11400000, guid: 4d1c40b7c1bb4884da4c096a360461f5, type: 2}
@@ -966,7 +968,7 @@ ReflectionProbe:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 51
-  m_IntensityMultiplier: 1.43
+  m_IntensityMultiplier: 1
   m_BlendDistance: 0.5
   m_HDR: 1
   m_BoxProjection: 0

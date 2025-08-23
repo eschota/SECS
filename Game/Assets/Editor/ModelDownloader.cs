@@ -4,6 +4,10 @@ using System.IO;
 using System.Collections;
 using UnityEngine.Networking;
 using System.Text.RegularExpressions;
+using System.Linq;
+
+// GeneratedModel script reference
+// GeneratedModelImporter reference
 
 public class ModelDownloader : EditorWindow
 {
@@ -317,8 +321,18 @@ public class ModelDownloader : EditorWindow
         Repaint();
         yield return new WaitForSeconds(0.2f);
         CreateAndAssignMaterials();
+        
+        downloadStatus = "Создаем префаб с мешами...";
+        Repaint();
+        yield return new WaitForSeconds(0.2f);
+        CreatePrefabWithMeshes();
+        
+        downloadStatus = "Создаем ScriptableObject...";
+        Repaint();
+        yield return new WaitForSeconds(0.2f);
+        CreateScriptableObject();
 
-        downloadStatus = "Готово! Все файлы скачаны, материалы созданы и назначены на модели.";
+        downloadStatus = "Готово! Все файлы скачаны, префаб создан и настроен.";
         Repaint();
 
         Debug.Log($"Скачивание завершено. Файлы сохранены в: {targetFolder}");
@@ -330,6 +344,9 @@ public class ModelDownloader : EditorWindow
         SetupURPTextureForResolution("1k");
         SetupURPTextureForResolution("10k");
         SetupURPTextureForResolution("100k");
+        
+        // Настраиваем нормалмапы для всех версий
+        SetupNormalMaps();
     }
 
     private void SetupURPTextureForResolution(string resolution)
@@ -400,10 +417,14 @@ public class ModelDownloader : EditorWindow
 
     private void SetupFBXImportSettings()
     {
+        Debug.Log("=== Настройка FBX импорта ===");
+        
         // Настраиваем все модели (1k, 10k и 100k)
         SetupFBXForResolution("1k");
         SetupFBXForResolution("10k");
         SetupFBXForResolution("100k");
+        
+        Debug.Log("=== Настройка FBX импорта завершена ===");
     }
 
     private void SetupFBXForResolution(string resolution)
@@ -416,6 +437,7 @@ public class ModelDownloader : EditorWindow
             // Scene settings
             importer.globalScale = 1f;
             importer.useFileUnits = false; // Convert Units = false
+
             importer.importBlendShapes = true;
             importer.importVisibility = true;
             importer.importCameras = true;
@@ -455,7 +477,30 @@ public class ModelDownloader : EditorWindow
 
             // Apply settings
             importer.SaveAndReimport();
-            Debug.Log($"FBX импорт настроен для {objectName}_{resolution}.fbx");
+            
+            // Принудительно обновляем настройки после реимпорта
+            AssetDatabase.Refresh();
+            
+            // Небольшая задержка для завершения реимпорта
+            System.Threading.Thread.Sleep(100);
+            
+            // Проверяем, что настройки применились
+            ModelImporter reimportedImporter = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+            if (reimportedImporter != null)
+            {
+                Debug.Log($"FBX импорт настроен для {objectName}_{resolution}.fbx");
+                Debug.Log($"  Convert Units: {!reimportedImporter.useFileUnits}");
+                Debug.Log($"  Scale Factor: {reimportedImporter.globalScale}");
+                
+                // Если настройки не применились, применяем еще раз
+                if (reimportedImporter.useFileUnits != false)
+                {
+                    Debug.LogWarning($"Convert Units не применился, применяем еще раз...");
+                    reimportedImporter.useFileUnits = false;
+                    reimportedImporter.globalScale = 1f;
+                    reimportedImporter.SaveAndReimport();
+                }
+            }
         }
         else
         {
@@ -505,7 +550,7 @@ public class ModelDownloader : EditorWindow
         {
             material.SetTexture("_MetallicGlossMap", urpTexture);
             // Включаем использование альфа канала для smoothness
-            material.SetFloat("_SmoothnessTextureChannel", 1); // 1 = Alpha channel
+            material.SetFloat("_SmoothnessTextureChannel", 1); // 1 = Alpha channel (Metallic Alpha)
             material.SetFloat("_Smoothness", 1.0f); // Максимальное значение, так как smoothness теперь в текстуре
             Debug.Log($"Назначена URP текстура {resolution}: {objectName}_{resolution}_urp.png (Metallic RGB + Smoothness Alpha)");
         }
@@ -557,6 +602,285 @@ public class ModelDownloader : EditorWindow
         else
         {
             Debug.LogError($"Не удалось загрузить материал {resolution}: {materialPath}");
+        }
+    }
+    
+    private void SetupNormalMaps()
+    {
+        // Настраиваем нормалмапы для всех версий (1k, 10k, 100k)
+        SetupNormalMapForResolution("1k");
+        SetupNormalMapForResolution("10k");
+        SetupNormalMapForResolution("100k");
+    }
+    
+    private void SetupNormalMapForResolution(string resolution)
+    {
+        string normalPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}_normal.png";
+        
+        TextureImporter importer = AssetImporter.GetAtPath(normalPath) as TextureImporter;
+        if (importer != null)
+        {
+            // Настраиваем как Normal Map
+            importer.textureType = TextureImporterType.NormalMap;
+            importer.SaveAndReimport();
+            
+            Debug.Log($"Нормалмапа настроена: {objectName}_{resolution}_normal.png (NormalMap)");
+        }
+        else
+        {
+            Debug.LogWarning($"Не удалось найти нормалмапу {resolution}: {normalPath}");
+        }
+    }
+    
+    private void CreatePrefabWithMeshes()
+    {
+        // Создаем корневой GameObject для префаба
+        GameObject rootPrefab = new GameObject($"prefab_{objectName}");
+        
+        // Добавляем Rigidbody на корень
+        Rigidbody rb = rootPrefab.AddComponent<Rigidbody>();
+        rb.useGravity = true;
+        rb.isKinematic = false;
+        
+        // Добавляем компонент io_base
+        var ioBaseType = System.Type.GetType("io_base, Assembly-CSharp");
+        if (ioBaseType != null)
+        {
+            rootPrefab.AddComponent(ioBaseType);
+            Debug.Log($"Компонент io_base добавлен на префаб {objectName}");
+        }
+        else
+        {
+            Debug.LogWarning($"Компонент io_base не найден для префаба {objectName}");
+        }
+        
+        // Создаем контейнер для мешей
+        GameObject modelContainer = new GameObject("Model");
+        modelContainer.transform.SetParent(rootPrefab.transform);
+        modelContainer.transform.localPosition = Vector3.zero;
+        modelContainer.transform.localRotation = Quaternion.identity;
+        modelContainer.transform.localScale = Vector3.one;
+        
+        // Создаем контейнер для клеток
+        GameObject cellsContainer = new GameObject("Cells");
+        cellsContainer.transform.SetParent(rootPrefab.transform);
+        cellsContainer.transform.localPosition = Vector3.zero;
+        cellsContainer.transform.localRotation = Quaternion.identity;
+        cellsContainer.transform.localScale = Vector3.one;
+        
+        // Создаем дочерние объекты для каждого меша в контейнере
+        CreateMeshChild(modelContainer, "1k", false);
+        CreateMeshChild(modelContainer, "10k", false);
+        CreateMeshChild(modelContainer, "100k", true); // Только 100k активен
+        
+        // Добавляем GeneratedModel на Model контейнер
+        AddGeneratedModelToContainer(modelContainer, cellsContainer);
+        
+        // Сохраняем префаб
+        string prefabPath = $"Assets/Meshes/{objectName}/prefab_{objectName}.prefab";
+        GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(rootPrefab, prefabPath);
+        
+        // Удаляем временный объект из сцены
+        Object.DestroyImmediate(rootPrefab);
+        
+        Debug.Log($"✅ Префаб создан: {prefabPath}");
+    }
+    
+    private void CreateMeshChild(GameObject parent, string resolution, bool isActive)
+    {
+        // Загружаем FBX модель
+        string fbxPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}.fbx";
+        GameObject fbxModel = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
+        
+        if (fbxModel != null)
+        {
+            // Создаем дочерний объект
+            GameObject child = new GameObject($"{objectName}_{resolution}");
+            child.transform.SetParent(parent.transform);
+            child.transform.localPosition = Vector3.zero;
+            child.transform.localRotation = Quaternion.identity;
+            child.transform.localScale = Vector3.one;
+            
+            // Копируем MeshRenderer и MeshFilter из FBX
+            MeshRenderer originalRenderer = fbxModel.GetComponent<MeshRenderer>();
+            MeshFilter originalFilter = fbxModel.GetComponent<MeshFilter>();
+            
+            if (originalRenderer != null && originalFilter != null)
+            {
+                MeshRenderer newRenderer = child.AddComponent<MeshRenderer>();
+                MeshFilter newFilter = child.AddComponent<MeshFilter>();
+                
+                // Копируем меш
+                newFilter.sharedMesh = originalFilter.sharedMesh;
+                
+                // Назначаем материал
+                string materialPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}.mat";
+                Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+                if (material != null)
+                {
+                    newRenderer.material = material;
+                    Debug.Log($"Материал назначен на {resolution}: {material.name}");
+                }
+                else
+                {
+                    Debug.LogWarning($"Материал не найден для {resolution}: {materialPath}");
+                }
+                
+
+                
+                // Сериализуем MeshRenderer
+                SerializedObject serializedRenderer = new SerializedObject(newRenderer);
+                serializedRenderer.Update();
+                serializedRenderer.ApplyModifiedProperties();
+                
+                Debug.Log($"GeneratedModel добавлен на меш {resolution}");
+            }
+            
+            // Устанавливаем активность
+            child.SetActive(isActive);
+            
+            Debug.Log($"Создан меш {resolution} (активен: {isActive})");
+        }
+        else
+        {
+            Debug.LogError($"Не удалось загрузить FBX модель: {fbxPath}");
+        }
+    }
+    
+    private void AddGeneratedModelToContainer(GameObject modelContainer, GameObject cellsContainer)
+    {
+        // Добавляем GeneratedModel на Model контейнер
+        var generatedModel = modelContainer.AddComponent<GeneratedModel>();
+        
+        // Устанавливаем параметры GeneratedModel напрямую
+        generatedModel.modelName = objectName;
+        generatedModel.resolution = "100k"; // Основное разрешение
+        generatedModel.cellsContainer = cellsContainer;
+        
+        // Получаем все MeshRenderer из дочерних объектов
+        MeshRenderer[] meshRenderers = modelContainer.GetComponentsInChildren<MeshRenderer>();
+        generatedModel.meshRenderers = meshRenderers;
+        
+        Debug.Log($"GeneratedModel добавлен на Model контейнер");
+        Debug.Log($"  modelName: {objectName}");
+        Debug.Log($"  resolution: 100k");
+        Debug.Log($"  cellsContainer: {cellsContainer.name}");
+        Debug.Log($"  meshRenderers: {meshRenderers.Length} рендереров");
+        
+        // Принудительно вызываем инициализацию
+        generatedModel.ini();
+    }
+    
+    private void CreateScriptableObject()
+    {
+        // Создаем ScriptableObject напрямую
+        item_SO itemSO = ScriptableObject.CreateInstance<item_SO>();
+        
+        // Загружаем иконку
+        string iconPath = $"Assets/Meshes/{objectName}/{objectName}_100k_icon.png";
+        Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>(iconPath);
+        
+        // Загружаем префаб
+        string prefabPath = $"Assets/Meshes/{objectName}/prefab_{objectName}.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        
+        // Назначаем значения напрямую
+        if (icon != null)
+        {
+            itemSO.icon = icon;
+            Debug.Log($"Иконка назначена в item_SO: {icon.name}");
+        }
+        else
+        {
+            Debug.LogWarning($"Иконка не найдена: {iconPath}");
+        }
+        
+        if (prefab != null)
+        {
+            // Получаем компонент io_base из префаба
+            var ioBaseComponent = prefab.GetComponent<io_base>();
+            if (ioBaseComponent != null)
+            {
+                itemSO.prefab = ioBaseComponent;
+                Debug.Log($"io_base компонент назначен в item_SO: {ioBaseComponent.name}");
+            }
+            else
+            {
+                Debug.LogWarning($"Компонент io_base не найден в префабе {prefab.name}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"Префаб не найден: {prefabPath}");
+        }
+        
+        // Устанавливаем заголовок
+        itemSO.Title = objectName;
+        Debug.Log($"Заголовок установлен: {objectName}");
+        
+        // Сохраняем ScriptableObject
+        string soPath = $"Assets/Meshes/{objectName}/item_SO_{objectName}.asset";
+        AssetDatabase.CreateAsset(itemSO, soPath);
+        AssetDatabase.SaveAssets();
+        
+        Debug.Log($"✅ ScriptableObject создан: {soPath}");
+    }
+    
+    private void AddGeneratedModelScripts()
+    {
+        // Добавляем скрипт GeneratedModel на все модели (1k, 10k, 100k)
+        AddGeneratedModelScriptForResolution("1k");
+        AddGeneratedModelScriptForResolution("10k");
+        AddGeneratedModelScriptForResolution("100k");
+    }
+    
+    private void AddGeneratedModelScriptForResolution(string resolution)
+    {
+        string fbxPath = $"Assets/Meshes/{objectName}/{objectName}_{resolution}.fbx";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
+        
+        if (prefab != null)
+        {
+            // Проверяем, есть ли уже скрипт GeneratedModel
+            var existingScript = prefab.GetComponent<GeneratedModel>();
+            if (existingScript == null)
+            {
+                // Добавляем скрипт напрямую
+                var script = prefab.AddComponent<GeneratedModel>();
+                
+                // Устанавливаем параметры через SerializedObject
+                SerializedObject serializedScript = new SerializedObject(script);
+                var modelNameProperty = serializedScript.FindProperty("modelName");
+                var resolutionProperty = serializedScript.FindProperty("resolution");
+                
+                if (modelNameProperty != null)
+                {
+                    modelNameProperty.stringValue = objectName;
+                    Debug.Log($"Установлено modelName: {objectName}");
+                }
+                
+                if (resolutionProperty != null)
+                {
+                    resolutionProperty.stringValue = resolution;
+                    Debug.Log($"Установлено resolution: {resolution}");
+                }
+                
+                serializedScript.ApplyModifiedProperties();
+                
+                // Сохраняем изменения
+                EditorUtility.SetDirty(prefab);
+                AssetDatabase.SaveAssets();
+                
+                Debug.Log($"✅ Скрипт GeneratedModel успешно добавлен на {objectName}_{resolution}");
+            }
+            else
+            {
+                Debug.Log($"Скрипт GeneratedModel уже существует на {objectName}_{resolution}");
+            }
+        }
+        else
+        {
+            Debug.LogError($"Не удалось загрузить префаб: {fbxPath}");
         }
     }
 }
