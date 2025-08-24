@@ -86,7 +86,7 @@ public class Creator : MonoBehaviour
     [SerializeField] private List<Material> _materials = new List<Material>();
     public bool SnapGrid = true;
     private io_base _current_prefab;
-    public io_base current_prefab_to_chabge;
+    public io_base current_prefab_to_chabge; 
     private int lastYawSteps = 0; // Запоминаем последний Yaw у созданной клетки 
     public io_base current_prefab
     {
@@ -120,6 +120,10 @@ public class Creator : MonoBehaviour
                 _current_prefab.transform.SetParent(transform);
                 _current_prefab.Status = io_base.io_base_status.Creating;
                 cells.Add(_current_prefab);
+                
+                // Логируем созданную клетку с её типом
+                string cellType = _current_prefab.GetCellType();
+                Debug.Log($"Created current_prefab: {_current_prefab.name} of type: {cellType}");
             }
             return _current_prefab;
         }
@@ -334,6 +338,11 @@ public class Creator : MonoBehaviour
             {
                 string prefabName = item.prefab.name;
                 item.prefab.prefab_name = prefabName;
+                
+                // Проверяем тип префаба и логируем
+                string cellType = item.prefab.GetCellType();
+                Debug.Log($"  - Prefab type: {cellType}, name: {prefabName}");
+                
                 prefabs.Add(item.prefab);
                 // Добавляем в словарь для быстрого поиска по имени
             
@@ -355,7 +364,7 @@ public class Creator : MonoBehaviour
         // Устанавливаем первый префаб как текущий
         if (prefabs.Count > 0)
         {
-            current_prefab_to_chabge = prefabs[0]; 
+        current_prefab_to_chabge = prefabs[0];
         }
         
         Debug.Log($"LoadPrefabs completed. Loaded {prefabs.Count} prefabs, lookup contains {prefabLookup.Count} entries");
@@ -385,6 +394,11 @@ public class Creator : MonoBehaviour
             var new_prefab = Instantiate(prefab, transform);
             cells.Add(new_prefab);
             new_prefab.Status = io_base.io_base_status.Placing;
+            
+            // Логируем созданную клетку с её типом
+            string cellType = new_prefab.GetCellType();
+            Debug.Log($"Placed cell: {new_prefab.name} of type: {cellType}");
+            
             return;
         }
     }
@@ -392,6 +406,7 @@ public class Creator : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
+        if(Application.isPlaying) return;
         // Загружаем префабы из новой системы и сериализуем их в сцену
         LoadPrefabs();
         
@@ -534,8 +549,8 @@ public class Creator : MonoBehaviour
         foreach (var cell in cells)
         {
             if (cell != null)
-            {
-                Destroy(cell.gameObject);
+        {
+            Destroy(cell.gameObject);
             }
         }
         cells.Clear();
@@ -708,7 +723,7 @@ public class Creator : MonoBehaviour
     }
 
     private MachineData CreateMachineData(string Machine_name)
-    { 
+    {
        // Debug.Log($"Total cells in scene: {cells.Count}");
         
         MachineData data = new MachineData();
@@ -809,7 +824,22 @@ public class Creator : MonoBehaviour
                 newCell.transform.rotation = cellData._target_world_rotation;
                 
                 cells.Add(newCell);
-                Debug.Log($"Successfully created cell: {newCell.name} of type {newCell.GetCellType()}");
+                string cellType = newCell.GetCellType();
+                Debug.Log($"Successfully created cell: {newCell.name} of type {cellType}");
+                
+                // Дополнительная информация для двигателей
+                if (cellType == "io_engine")
+                {
+                    var engine = newCell as io_engine;
+                    if (engine != null && engine.engineSettings != null)
+                    {
+                        Debug.Log($"  - Engine details: force_power={engine.engineSettings.force_power}, force_type={engine.engineSettings.force_type}, direction={engine.engineSettings.force_vector_local}");
+                    }
+                    else if (engine != null)
+                    {
+                        Debug.LogWarning($"  - Engine {engine.name} has no Engine_SO assigned!");
+                    }
+                }
             }
             else
             {
@@ -876,7 +906,22 @@ public class Creator : MonoBehaviour
                 newCell.transform.rotation = cellData._target_world_rotation;
                 
                 cells.Add(newCell);
-                Debug.Log($"Successfully created cell: {newCell.name} of type {newCell.GetCellType()}");
+                string cellType = newCell.GetCellType();
+                Debug.Log($"Successfully created cell: {newCell.name} of type {cellType}");
+                
+                // Дополнительная информация для двигателей
+                if (cellType == "io_engine")
+                {
+                    var engine = newCell as io_engine;
+                    if (engine != null && engine.engineSettings != null)
+                    {
+                        Debug.Log($"  - Engine details: force_power={engine.engineSettings.force_power}, force_type={engine.engineSettings.force_type}, direction={engine.engineSettings.force_vector_local}");
+                    }
+                    else if (engine != null)
+                    {
+                        Debug.LogWarning($"  - Engine {engine.name} has no Engine_SO assigned!");
+                    }
+                }
             }
             else
             {

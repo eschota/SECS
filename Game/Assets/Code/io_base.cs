@@ -56,7 +56,17 @@ public class io_base : MonoBehaviour
                 var currentStatusSO = GetStatusSO(_status);
                 if (currentStatusSO != null)
                 {
-                    targetRigidbody.isKinematic = currentStatusSO.isKinematic;
+                    // Проверяем что targetRigidbody существует
+                    if (targetRigidbody == null)
+                    {
+                        targetRigidbody = GetComponent<Rigidbody>();
+                    }
+                    
+                    if (targetRigidbody != null)
+                    {
+                        targetRigidbody.isKinematic = currentStatusSO.isKinematic;
+                    }
+                    
                     TurnColliders(currentStatusSO.collidersEnabled);
 
                     if (currentStatusSO.meshRenderer)
@@ -120,6 +130,8 @@ public class io_base : MonoBehaviour
 
     void Update()
     {
+        if(Play.i.currentState == Play.State.SimulateOnline) return;
+
         localTimer += Time.deltaTime;
 
         var currentStatusSO = GetStatusSO(Status);
@@ -130,7 +142,13 @@ public class io_base : MonoBehaviour
         float normalizedTime = (transitionDuration > 0) ? Mathf.Clamp01(statusTransitionTimer / transitionDuration) : 1f;
         float curveValue = currentStatusSO.transitionCurve.Evaluate(normalizedTime);
 
-        if (targetRigidbody.isKinematic)
+        // Проверяем что targetRigidbody существует
+        if (targetRigidbody == null)
+        {
+            targetRigidbody = GetComponent<Rigidbody>();
+        }
+        
+        if (targetRigidbody != null && targetRigidbody.isKinematic)
         {
             transform.position = Vector3.Lerp(transform.position, target_world_position, curveValue);
             transform.rotation = Quaternion.Lerp(transform.rotation, target_world_rotation, curveValue);
@@ -181,23 +199,7 @@ public class io_base : MonoBehaviour
         }
     }
 
-    void FixedUpdate()
-    {
-        io_base_SO currentStatusSO = GetStatusSO(Status);
-        if (currentStatusSO != null && !targetRigidbody.isKinematic)
-        {
-            if (currentStatusSO.gravityVector != Vector3.zero)
-            {
-                targetRigidbody.AddForce(currentStatusSO.gravityVector, currentStatusSO.gravityForceMode);
-            }
-
-            if (currentStatusSO.forceToTargetPosition > 0)
-            {
-                Vector3 directionToTarget = target_world_position - targetRigidbody.worldCenterOfMass;
-                targetRigidbody.AddForce(directionToTarget.normalized * currentStatusSO.forceToTargetPosition, currentStatusSO.targetPositionForceMode);
-            }
-        }
-    }
+  
 
     private void UpdatePulse(ref Vector3 pos, ref Vector3 scale, ref Quaternion rot, io_base_SO so)
     {

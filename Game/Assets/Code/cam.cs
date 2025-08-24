@@ -9,6 +9,7 @@ public class cam : MonoBehaviour
     public float speed = 10;
     public float movementSpeed = 5f;
     public float rotationSpeed = 2f;
+    public Vector3 cameraOffset = Vector3.zero; // Смещение камеры относительно центра машины
     public float zoomSpeed = 2f;
     public float minZoomDistance = 0.3f;
     public float maxZoomDistance = 2f;
@@ -57,26 +58,27 @@ public class cam : MonoBehaviour
     {
         if (UI_Canvas.i?.currentState == UI_Canvas.UI_State.Chatting) return;
 
-        // симуляция: pivot тянем к центру баундинга машины (без родительства и поворота)
-        if (followMachine && followedMachine)
+        // Разделяем логику для разных режимов
+        if (Play.i?.currentState == Play.State.Create)
         {
-            Vector3 target = followedMachine.transform.TransformPoint(followedMachine.LocalCenter);
-            cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target, Time.deltaTime * speed);
+            // Конструктор: работаем с target_pivot_position
+            HandleMovement();
+            HandleRotation();
+            HandleZoom();
+            HandleFocusConstructor();
+            
+            // Тянем pivot к target_pivot_position
+            cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target_pivot_position, Time.deltaTime * speed);
+        }
+        else
+        {
+            // Симуляция: камера прикреплена к машине как дочерний объект
+            // Позиция обновляется автоматически через иерархию
+            HandleRotation();
+            HandleZoom();
         }
 
-        // конструктор: работаем когда Play в Create
-        if (Play.i?.currentState == Play.State.Create)
-            HandleMovement();
-
-        HandleRotation();
-        HandleZoom();
-        HandleFocusConstructor();
-
         _cam.fieldOfView = Mathf.Lerp(_cam.fieldOfView, targetFov, Time.deltaTime * speed);
-
-        // конструктор: тянем pivot к target_pivot_position
-        if (Play.i?.currentState == Play.State.Create)
-            cameraPivot.transform.position = Vector3.Lerp(cameraPivot.transform.position, target_pivot_position, Time.deltaTime * speed);
     }
 
     // --- режимы ---
@@ -85,8 +87,15 @@ public class cam : MonoBehaviour
         if (state == Play.State.Create)
         {
             // вернуться к сборке
-            followMachine   = false;
+            followMachine = false;
             followedMachine = null;
+            
+            // Отключаем камеру от машины
+            if (cameraPivot != null)
+            {
+                cameraPivot.transform.SetParent(null, true);
+            }
+            
             FocusOnConstructor();
         }
         else
@@ -109,17 +118,18 @@ public class cam : MonoBehaviour
         {
             if (cameraPivot == null) CreatePivot();
 
-            // используем CenterOfMass, fallback на LocalCenter
-            Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
-                                            : m.transform.TransformPoint(m.LocalCenter);
-
-            cameraPivot.transform.position = center;
+            // Прикрепляем pivot к машине как дочерний объект
+            cameraPivot.transform.SetParent(m.transform, true);
+            
+            // Устанавливаем локальную позицию в центре машины с возможным смещением
+            // Поскольку машина уже построена с центром в центроиде клеток
+            cameraPivot.transform.localPosition = cameraOffset;
 
             initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
             followedMachine = m;
             followMachine = true;
 
-            Debug.Log("<color=#4DA3FF>[cam]</color> attached to local machine");
+            Debug.Log($"<color=#4DA3FF>[cam]</color> attached to local machine as child at center with offset {cameraOffset}");
         }
     }
 
@@ -135,14 +145,17 @@ public class cam : MonoBehaviour
         followedMachine = m;
         followMachine = true;
 
-        cameraPivot.transform.SetParent(null, true);
+        // Прикрепляем pivot к машине как дочерний объект для плавного следования
+        cameraPivot.transform.SetParent(m.transform, true);
 
-        // используем CenterOfMass, fallback на LocalCenter
-        Vector3 center = m.CenterOfMass ? m.CenterOfMass.position
-                                        : m.transform.TransformPoint(m.LocalCenter);
-        cameraPivot.transform.position = center;
+        // Устанавливаем локальную позицию в центре машины с возможным смещением
+        // Поскольку машина уже построена с центром в центроиде клеток
+        cameraPivot.transform.localPosition = cameraOffset;
 
         initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
+        
+        Debug.Log($"<color=#4DA3FF>[cam]</color> attached to machine as child at center with offset {cameraOffset}");
+        Debug.Log($"<color=#4DA3FF>[cam]</color> Machine center: {m.transform.position}, LocalCenter: {m.LocalCenter}");
     }
 
     // --- управление камерой ---

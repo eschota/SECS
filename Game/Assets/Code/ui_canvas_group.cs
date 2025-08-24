@@ -17,10 +17,14 @@ public class ui_canvas_group : MonoBehaviour
     {
 
     }
-
+    void OnDestroy()
+    {
+        Play.OnPlayStateChange -= OnPlayStateChange;
+    }
     void OnPlayStateChange(Play.State state)
     {
-        Debug.Log($"OnPlayStateChange: {state} gameobject: {gameObject.name}");
+        Debug.Log($"gameobject: {gameObject.name}");
+        Debug.Log($"OnPlayStateChange: {state}");
         if (states_to_hide.Contains(state))
         {
             canvas_group.alpha = 0;

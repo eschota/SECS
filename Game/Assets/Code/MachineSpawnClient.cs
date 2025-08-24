@@ -123,7 +123,24 @@ public class MachineSpawnClient : NetworkBehaviour
 
         // 1) Собираем blueprint и оцениваем радиус
         var bp    = BuildBlueprintFromCreator(creator);
-        var bytes = BlueprintCodec.ToBytes(bp);
+        var bytes = BlueprintCodec.ToBytesOptimized(bp);
+        
+        // Проверяем размер данных
+        if (bytes.Length > 500) // Оставляем небольшой запас от лимита 512
+        {
+            Debug.LogWarning($"[Spawn] Blueprint data size ({bytes.Length} bytes) is close to RPC limit (512 bytes). Consider reducing machine complexity.");
+            
+            // Если данные слишком большие, используем разбиение на части
+            if (bytes.Length > 512)
+            {
+                Debug.LogWarning($"[Spawn] Blueprint data size ({bytes.Length} bytes) exceeds RPC limit. Using chunked transmission.");
+                var chunks = BlueprintCodec.SplitBlueprintForRPC(bp);
+                // TODO: Реализовать передачу по частям
+                // Пока что просто предупреждаем
+                return;
+            }
+        }
+        
         float newRadius = EstimateHorizontalRadius(bp);
 
         // 2) Персональный якорь и поиск свободной точки

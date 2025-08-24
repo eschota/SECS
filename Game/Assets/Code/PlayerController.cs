@@ -32,14 +32,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (!Object || !Object.HasInputAuthority) return;
 
-        if (Camera.main != null)
-        {
-            transform.SetPositionAndRotation(
-                Camera.main.transform.position,
-                Camera.main.transform.rotation
-            );
-        }
-        
         // Управление двигателями
         HandleEngineControl();
     }
@@ -169,7 +161,14 @@ public class PlayerController : NetworkBehaviour
         Debug.Log($"PlayerController: Найдено {engines.Count} двигателей в машине");
         foreach (var engine in engines)
         {
-            Debug.Log($"PlayerController: Двигатель {engine.name} - направление: {engine.force_vector_local}, мощность: {engine.force_power}");
+            if (engine.engineSettings != null)
+            {
+                Debug.Log($"PlayerController: Двигатель {engine.name} - направление: {engine.engineSettings.force_vector_local}, мощность: {engine.engineSettings.force_power}");
+            }
+            else
+            {
+                Debug.LogWarning($"PlayerController: Двигатель {engine.name} не имеет настроек Engine_SO!");
+            }
         }
     }
     
@@ -240,8 +239,10 @@ public class PlayerController : NetworkBehaviour
     {
         foreach (var engine in engines)
         {
+            if (engine.engineSettings == null) continue;
+            
             // Получаем мировое направление двигателя
-            Vector3 engineWorldDirection = engine.transform.TransformDirection(engine.force_vector_local);
+            Vector3 engineWorldDirection = engine.transform.TransformDirection(engine.engineSettings.force_vector_local);
             
             // Вычисляем угол между направлением двигателя и целевым направлением
             float angle = Vector3.Angle(engineWorldDirection, targetDirection);
@@ -252,11 +253,18 @@ public class PlayerController : NetworkBehaviour
                 // Вычисляем эффективность двигателя (1.0 = полная эффективность, 0.0 = неэффективен)
                 float effectiveness = Mathf.Cos(angle * Mathf.Deg2Rad);
                 
-                // Применяем силу через AddForceAtPosition
-                Vector3 force = engineWorldDirection * engine.force_power * effectiveness;
-                machineRigidbody.AddForceAtPosition(force, engine.transform.position, engine.force_type);
+                // Обновляем состояние двигателя на основе эффективности
+                engine.UpdateEngineState(effectiveness, Time.fixedDeltaTime);
                 
-                Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}, сила {force}");
+                // Применяем силу через новый метод
+                engine.ApplyForce(machineRigidbody);
+                
+                Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}");
+            }
+            else
+            {
+                // Двигатель не эффективен в этом направлении - останавливаем его
+                engine.UpdateEngineState(0f, Time.fixedDeltaTime);
             }
         }
     }

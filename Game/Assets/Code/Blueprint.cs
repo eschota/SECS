@@ -34,7 +34,7 @@ public static class BlueprintCodec {
     var json = JsonUtility.ToJson(bp, false);
     var raw  = Encoding.UTF8.GetBytes(json);
     using var ms = new MemoryStream();
-    using (var ds = new DeflateStream(ms, System.IO.Compression.CompressionLevel.Fastest, true))
+    using (var ds = new DeflateStream(ms, System.IO.Compression.CompressionLevel.Optimal, true))
       ds.Write(raw, 0, raw.Length);
     return ms.ToArray();
   }
@@ -46,5 +46,123 @@ public static class BlueprintCodec {
     ds.CopyTo(outMs);
     var json = Encoding.UTF8.GetString(outMs.ToArray());
     return JsonUtility.FromJson<MachineBlueprint>(json);
+  }
+  
+  /// <summary>
+  /// Оптимизированная сериализация для RPC (убирает лишние данные)
+  /// </summary>
+  public static byte[] ToBytesOptimized(MachineBlueprint bp) {
+    // Создаем упрощенную версию blueprint только с необходимыми данными
+    var optimizedBp = new MachineBlueprint();
+    optimizedBp.cells = new List<io_base_serialized>();
+    
+    foreach (var cell in bp.cells)
+    {
+      var optimizedCell = new io_base_serialized
+      {
+        _prefab_name = cell._prefab_name,
+        _target_world_position = cell._target_world_position,
+        _target_world_rotation = cell._target_world_rotation,
+        _yaw_steps = cell._yaw_steps,
+        _status = cell._status,
+        _cell_type = cell._cell_type
+        // Убираем name для экономии места
+      };
+      
+      // Добавляем специфичные данные для двигателей
+      if (cell is io_engine_serialized engineCell)
+      {
+        var optimizedEngine = new io_engine_serialized
+        {
+          _prefab_name = engineCell._prefab_name,
+          _target_world_position = engineCell._target_world_position,
+          _target_world_rotation = engineCell._target_world_rotation,
+          _yaw_steps = engineCell._yaw_steps,
+          _status = engineCell._status,
+          _cell_type = engineCell._cell_type,
+          force_power = engineCell.force_power,
+          force_type = engineCell.force_type,
+          force_vector_local = engineCell.force_vector_local,
+          fuel_per_second = engineCell.fuel_per_second,
+          electricity_per_second = engineCell.electricity_per_second
+        };
+        optimizedBp.cells.Add(optimizedEngine);
+      }
+      else
+      {
+        optimizedBp.cells.Add(optimizedCell);
+      }
+    }
+    
+    var json = JsonUtility.ToJson(optimizedBp, false);
+    var raw = Encoding.UTF8.GetBytes(json);
+    
+    // Используем максимальное сжатие
+    using var ms = new MemoryStream();
+    using (var ds = new DeflateStream(ms, System.IO.Compression.CompressionLevel.Optimal, true))
+      ds.Write(raw, 0, raw.Length);
+    
+    var compressed = ms.ToArray();
+    Debug.Log($"Blueprint optimization: {raw.Length} -> {compressed.Length} bytes ({100f * compressed.Length / raw.Length:F1}%)");
+    
+    return compressed;
+  }
+  
+  /// <summary>
+  /// Разбивает большой blueprint на части для передачи через RPC
+  /// </summary>
+  public static List<byte[]> SplitBlueprintForRPC(MachineBlueprint bp, int maxChunkSize = 400)
+  {
+    var chunks = new List<byte[]>();
+    var optimizedBp = new MachineBlueprint();
+    optimizedBp.cells = new List<io_base_serialized>();
+    
+    foreach (var cell in bp.cells)
+    {
+      optimizedBp.cells.Add(cell);
+      
+      // Проверяем размер текущего чанка
+      var testJson = JsonUtility.ToJson(optimizedBp, false);
+      var testRaw = Encoding.UTF8.GetBytes(testJson);
+      
+      using var testMs = new MemoryStream();
+      using (var testDs = new DeflateStream(testMs, System.IO.Compression.CompressionLevel.Optimal, true))
+        testDs.Write(testRaw, 0, testRaw.Length);
+      
+      if (testMs.ToArray().Length > maxChunkSize)
+      {
+        // Убираем последнюю клетку и сохраняем текущий чанк
+        optimizedBp.cells.RemoveAt(optimizedBp.cells.Count - 1);
+        
+        var json = JsonUtility.ToJson(optimizedBp, false);
+        var raw = Encoding.UTF8.GetBytes(json);
+        
+        using var ms = new MemoryStream();
+        using (var ds = new DeflateStream(ms, System.IO.Compression.CompressionLevel.Optimal, true))
+          ds.Write(raw, 0, raw.Length);
+        
+        chunks.Add(ms.ToArray());
+        
+        // Начинаем новый чанк с последней клеткой
+        optimizedBp.cells.Clear();
+        optimizedBp.cells.Add(cell);
+      }
+    }
+    
+    // Добавляем последний чанк
+    if (optimizedBp.cells.Count > 0)
+    {
+      var json = JsonUtility.ToJson(optimizedBp, false);
+      var raw = Encoding.UTF8.GetBytes(json);
+      
+      using var ms = new MemoryStream();
+      using (var ds = new DeflateStream(ms, System.IO.Compression.CompressionLevel.Optimal, true))
+        ds.Write(raw, 0, raw.Length);
+      
+      chunks.Add(ms.ToArray());
+    }
+    
+    Debug.Log($"Blueprint split into {chunks.Count} chunks for RPC transmission");
+    return chunks;
   }
 }

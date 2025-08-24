@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a82ee4b0730149498cc727d93d268d2, type: 3}
   m_Name: 01_engine_01
   m_EditorClassIdentifier: 
-  prefab: {fileID: 5863668223384983802, guid: 9f2ac164f59682d4aa02ed4e58fe88bf, type: 3}
+  prefab: {fileID: 8998842673248546539, guid: 9f2ac164f59682d4aa02ed4e58fe88bf, type: 3}
   icon: {fileID: 21300000, guid: d7c0b8eae53e9454c9b5dc48377d1490, type: 3}
   Title: Engine
   Description: "\u041A\u041E\u041B\u0415\u0421\u041E!"
