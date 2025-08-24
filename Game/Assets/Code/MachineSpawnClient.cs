@@ -27,11 +27,59 @@ public class MachineSpawnClient : NetworkBehaviour
 
     public override void Spawned()
     {
+        Debug.Log($"{TAG} Spawned() called, HasInputAuthority: {Object?.HasInputAuthority}");
+        
         // этот компонент должен работать только у владельца PlayerPrefab
-        if (!Object.HasInputAuthority) { enabled = false; return; }
+        if (!Object.HasInputAuthority) 
+        { 
+            Debug.Log($"{TAG} No InputAuthority, disabling component");
+            enabled = false; 
+            return; 
+        }
+        
+        Debug.Log($"{TAG} Component enabled for local player");
+        
         if (!creator) creator = FindFirstObjectByType<Creator>();
         if (!machinePrefab) Debug.LogWarning($"{TAG} Machine Prefab не назначен на PlayerPrefab!");
+        
         Play.OnPlayStateChange += OnPlayStateChangeLocal;
+        
+        // Уведомляем сервер о подключении нового игрока
+        RPC_NotifyPlayerJoined();
+        
+        Debug.Log($"{TAG} Spawned() completed successfully");
+    }
+
+    /// <summary>
+    /// Уведомляем сервер о подключении нового игрока
+    /// </summary>
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority, Channel = RpcChannel.Reliable)]
+    private void RPC_NotifyPlayerJoined()
+    {
+        Debug.Log($"{TAG} New player joined, requesting existing machines");
+        
+        // Запрашиваем отправку существующих машин новому игроку
+        RPC_RequestExistingMachines();
+    }
+
+    /// <summary>
+    /// Запрашиваем отправку существующих машин
+    /// </summary>
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority, Channel = RpcChannel.Reliable)]
+    private void RPC_RequestExistingMachines()
+    {
+        Debug.Log($"{TAG} Sending existing machines to new player");
+        
+        // Находим все существующие машины и отправляем их новому игроку
+        var existingMachines = Runner.GetAllBehaviours<Machine>();
+        foreach (var machine in existingMachines)
+        {
+            if (machine != null && machine.Object != null && machine.Object.IsValid)
+            {
+                // Отправляем информацию о существующей машине новому игроку
+                machine.RPC_SendMachineToNewPlayer(Runner.LocalPlayer);
+            }
+        }
     }
 
     private void OnDestroy()
@@ -54,6 +102,9 @@ public class MachineSpawnClient : NetworkBehaviour
     /// </summary>
     public void RequestSpawnFromCreator()
     {
+        Debug.Log($"{TAG} RequestSpawnFromCreator called");
+        Debug.Log($"{TAG} Runner: {Runner}, IsRunning: {Runner?.IsRunning}, HasInputAuthority: {Object?.HasInputAuthority}");
+        
         if (!Runner || !Runner.IsRunning || !Object.HasInputAuthority)
         {
             Debug.LogWarning($"{TAG} Runner не готов или нет InputAuthority.");
@@ -252,25 +303,51 @@ public void RequestDespawnOwnedMachine()
     private static MachineBlueprint BuildBlueprintFromCreator(Creator cr)
     {
         var bp = new MachineBlueprint();
+        Debug.Log($"[Spawn] Building blueprint from {cr.cells.Count} cells");
+        Debug.Log($"[Spawn] Creator.prefabLookup contains {cr.prefabLookup.Count} prefabs");
+        
+        // Выводим доступные префабы для отладки
+        if (cr.prefabLookup.Count > 0)
+        {
+            string availablePrefabs = string.Join(", ", cr.prefabLookup.Keys.Take(5));
+            Debug.Log($"[Spawn] Available prefabs: {availablePrefabs}");
+        }
+        
         foreach (var cell in cr.cells)
         {
             if (!cell) continue;
             if (cell.Status == io_base.io_base_status.Creating) continue;
             if (cell.Status == io_base.io_base_status.Hidden) continue;
 
-            int idx = -1;
-            for (int i = 0; i < cr.prefabs.Count; i++)
-                if (cr.prefabs[i].io_base_cell_type == cell.io_base_cell_type) { idx = i; break; }
-            if (idx < 0) continue;
-
-            bp.cells.Add(new CellDataNet {
-                prefabIndex = idx,
-                position    = cell.target_world_position,
-                rotation    = cell.target_world_rotation,
-                name        = cell.name
-            });
+            // Используем полиморфную сериализацию
+            io_base_serialized cellData = CreateSerializedData(cell);
+            bp.cells.Add(cellData);
+            
+            Debug.Log($"[Spawn] Adding cell: {cell.name}, type: {cell.GetCellType()}, position: {cell.target_world_position}");
         }
+        
+        Debug.Log($"[Spawn] Blueprint created with {bp.cells.Count} cells");
         return bp;
+    }
+    
+    private static io_base_serialized CreateSerializedData(io_base cell)
+    {
+        // Создаем правильный тип данных на основе типа клетки
+        io_base_serialized cellData;
+        
+        switch (cell.GetCellType())
+        {
+            case "io_engine":
+                cellData = new io_engine_serialized();
+                break;
+            default:
+                cellData = new io_base_serialized();
+                break;
+        }
+        
+        // Используем полиморфную сериализацию
+        cell.SerializeToData(cellData);
+        return cellData;
     }
 
     private static float EstimateHorizontalRadius(MachineBlueprint bp)
@@ -282,10 +359,10 @@ public void RequestDespawnOwnedMachine()
 
         foreach (var c in bp.cells)
         {
-            if (c.position.x < minX) minX = c.position.x;
-            if (c.position.x > maxX) maxX = c.position.x;
-            if (c.position.z < minZ) minZ = c.position.z;
-            if (c.position.z > maxZ) maxZ = c.position.z;
+            if (c._target_world_position.x < minX) minX = c._target_world_position.x;
+            if (c._target_world_position.x > maxX) maxX = c._target_world_position.x;
+            if (c._target_world_position.z < minZ) minZ = c._target_world_position.z;
+            if (c._target_world_position.z > maxZ) maxZ = c._target_world_position.z;
         }
 
         float dx = (maxX - minX) + 1.0f; // + диаметр клетки

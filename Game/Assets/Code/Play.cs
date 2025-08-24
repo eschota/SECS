@@ -66,13 +66,44 @@ public class Play : MonoBehaviour
 
 public void TogglePlayMode()
 {
-    var spawner = FindFirstObjectByType<MachineSpawnClient>();
+    // Ищем MachineSpawnClient на локальном игроке
+    MachineSpawnClient spawner = null;
+    
+    // Сначала ищем на локальном игроке
+    var localPlayer = FindFirstObjectByType<PlayerSpawner>();
+    if (localPlayer != null)
+    {
+        // Ищем среди всех MachineSpawnClient в сцене
+        var allSpawners = FindObjectsOfType<MachineSpawnClient>();
+        foreach (var s in allSpawners)
+        {
+            if (s.Object != null && s.Object.HasInputAuthority)
+            {
+                spawner = s;
+                break;
+            }
+        }
+    }
+    
+    // Fallback: ищем любой MachineSpawnClient
+    if (spawner == null)
+    {
+        spawner = FindFirstObjectByType<MachineSpawnClient>();
+    }
 
     if (currentState == State.Create)
     {
         // → сет. симуляция
         currentState = State.SimulateOnline;
-        if (spawner) spawner.RequestSpawnFromCreator();
+        if (spawner) 
+        {
+            Debug.Log($"Found spawner: {spawner.name}, HasInputAuthority: {spawner.Object?.HasInputAuthority}");
+            spawner.RequestSpawnFromCreator();
+        }
+        else
+        {
+            Debug.LogWarning("No MachineSpawnClient found!");
+        }
         Debug.Log("Switched to simulation mode");
         OnPlayStateChange?.Invoke(currentState);
     }
@@ -83,6 +114,8 @@ public void TogglePlayMode()
 
         currentState = State.Create;
         ResetHull();
+         
+        
         Debug.Log("Switched to creation mode");
         OnPlayStateChange?.Invoke(currentState);
     }

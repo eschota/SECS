@@ -87,7 +87,7 @@ public class cam : MonoBehaviour
             // вернуться к сборке
             followMachine   = false;
             followedMachine = null;
-            SetupCameraToLastCell();
+            FocusOnConstructor();
         }
         else
         {
@@ -248,22 +248,7 @@ public class cam : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.F))
         {
-            Creator cr = FindObjectOfType<Creator>();
-            if (cr != null && cr.cells.Count > 0)
-            {
-                Vector3 avg = Vector3.zero;
-                foreach (var cell in cr.cells) avg += cell.transform.position;
-                avg /= cr.cells.Count;
-
-                io_base closest = null;
-                float minDist = float.MaxValue;
-                foreach (var cell in cr.cells)
-                {
-                    float d = Vector3.Distance(cell.transform.position, avg);
-                    if (d < minDist) { minDist = d; closest = cell; }
-                }
-                if (closest) target_pivot_position = closest.transform.position;
-            }
+            FocusOnConstructor();
         }
     }
 
@@ -316,5 +301,28 @@ public class cam : MonoBehaviour
             target_pivot_position   = last.target_world_position;
             isInitialized = true;
         }
+    }
+
+    /// <summary>
+    /// Публичный метод для смещения камеры к конструктору и клеткам
+    /// </summary>
+    public void FocusOnConstructor()
+    {
+          Creator cr = Creator.instance;
+            if (cr != null && cr.cells.Count > 0)
+            {
+                Vector3 avg = Vector3.zero;
+                foreach (var cell in cr.cells) avg += cell.transform.position;
+                avg /= cr.cells.Count;
+
+                io_base closest = null;
+                float minDist = float.MaxValue;
+                foreach (var cell in cr.cells)
+                {
+                    float d = Vector3.Distance(cell.transform.position, avg);
+                    if (d < minDist) { minDist = d; closest = cell; }
+                }
+                if (closest) target_pivot_position = closest.transform.position;
+            }
     }
 }

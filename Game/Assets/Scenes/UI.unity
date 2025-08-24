@@ -681,6 +681,8 @@ GameObject:
   - component: {fileID: 109950600}
   - component: {fileID: 109950599}
   - component: {fileID: 109950598}
+  - component: {fileID: 109950602}
+  - component: {fileID: 109950601}
   m_Layer: 5
   m_Name: Create
   m_TagString: Untagged
@@ -762,6 +764,32 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 109950596}
   m_CullTransparentMesh: 1
+--- !u!114 &109950601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 109950596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9ca97d282237e64bac729ba363b5f88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  states_to_hide: 0300000000000000
+  canvas_group: {fileID: 109950602}
+--- !u!225 &109950602
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 109950596}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &115707252
 GameObject:
   m_ObjectHideFlags: 0
@@ -3736,6 +3764,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1012885803}
   - component: {fileID: 1012885804}
+  - component: {fileID: 1012885806}
+  - component: {fileID: 1012885805}
   m_Layer: 5
   m_Name: PlayMenu
   m_TagString: Untagged
@@ -3792,6 +3822,32 @@ MonoBehaviour:
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1
+--- !u!114 &1012885805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1012885802}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9ca97d282237e64bac729ba363b5f88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  states_to_hide: 0300000002000000
+  canvas_group: {fileID: 1012885806}
+--- !u!225 &1012885806
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1012885802}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1043637339
 GameObject:
   m_ObjectHideFlags: 0
@@ -3804,6 +3860,8 @@ GameObject:
   - component: {fileID: 1043637343}
   - component: {fileID: 1043637342}
   - component: {fileID: 1043637341}
+  - component: {fileID: 1043637345}
+  - component: {fileID: 1043637344}
   m_Layer: 5
   m_Name: Modify
   m_TagString: Untagged
@@ -3884,6 +3942,32 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1043637339}
   m_CullTransparentMesh: 1
+--- !u!225 &1043637344
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1043637339}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &1043637345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1043637339}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9ca97d282237e64bac729ba363b5f88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  states_to_hide: 020000000300000000000000
+  canvas_group: {fileID: 1043637344}
 --- !u!1 &1066323605
 GameObject:
   m_ObjectHideFlags: 0
@@ -7344,7 +7428,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00092324865}
+  m_AnchoredPosition: {x: 0, y: 0.0001435756}
   m_SizeDelta: {x: 0, y: 550}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2156336653733276782
@@ -8624,7 +8708,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 6483252148726141145}
   m_Direction: 2
   m_Value: 0
-  m_Size: 1
+  m_Size: 0.9999752
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+
+
 public class io_base : MonoBehaviour
 {
     public enum
@@ -31,7 +33,7 @@ public class io_base : MonoBehaviour
     [SerializeField] public Quaternion target_world_rotation;
     [SerializeField] public GeneratedModel[] generated_models = new GeneratedModel[3];
     [SerializeField] private List<io_base_SO> status_definitions = new List<io_base_SO>();
-
+    [SerializeField] public string prefab_name;
     [SerializeField] public Rigidbody targetRigidbody;
 
     public float statusTransitionTimer = 0f;
@@ -236,5 +238,29 @@ public class io_base : MonoBehaviour
 
         // перезапустим анимацию перехода статуса
         statusTransitionTimer = 0f;
+    }
+
+    // Виртуальные методы для сериализации
+    public virtual string GetCellType() => "io_base";
+    
+    public virtual void SerializeToData(io_base_serialized data)
+    {
+        data._prefab_name = prefab_name;
+        data._target_world_position = target_world_position;
+        data._target_world_rotation = target_world_rotation;
+        data._yaw_steps = yawSteps;
+        data._status = (int)Status;
+        data.name = name;
+        data._cell_type = GetCellType();
+    }
+    
+    public virtual void DeserializeFromData(io_base_serialized data)
+    {
+        prefab_name = data._prefab_name;
+        target_world_position = data._target_world_position;
+        target_world_rotation = data._target_world_rotation;
+        yawSteps = data._yaw_steps;
+        Status = (io_base_status)data._status;
+        name = data.name;
     }
 }

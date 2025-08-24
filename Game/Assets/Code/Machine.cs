@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Fusion;
 using UnityEngine;
 
@@ -23,6 +25,8 @@ public class Machine : NetworkBehaviour
 
     private const string TAG = "<color=#4DA3FF>[Machine]</color>";
     private int _machineLayer = -1;
+    private Dictionary<string, io_base> prefabLookup = new Dictionary<string, io_base>();
+    private byte[] savedBlueprintData; // Сохраняем blueprint для отправки новым игрокам
 
     public override void Spawned()
     {
@@ -64,6 +68,31 @@ public class Machine : NetworkBehaviour
             OnLocalMachineReady?.Invoke(this);
 
         Debug.Log($"{TAG} Сборка завершена. Extent={BoundsMaxExtent:F2}, safeRadius={safeRadius:F2}");
+        
+        // Сохраняем blueprint данные для отправки новым игрокам
+        savedBlueprintData = data;
+    }
+
+    /// <summary>
+    /// Отправляем информацию о существующей машине новому игроку
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    public void RPC_SendMachineToNewPlayer(PlayerRef newPlayer)
+    {
+        // Проверяем что это новый игрок и не владелец машины
+        if (Runner.LocalPlayer == newPlayer && Object.InputAuthority != newPlayer)
+        {
+            // Сохраняем текущий blueprint для отправки
+            if (savedBlueprintData != null)
+            {
+                Debug.Log($"{TAG} Отправляем существующую машину новому игроку {newPlayer}");
+                RPC_SetBlueprint(savedBlueprintData);
+            }
+            else
+            {
+                Debug.LogWarning($"{TAG} Нет сохраненного blueprint для отправки новому игроку");
+            }
+        }
     }
 
     // ------------------ Сборка из blueprint ------------------
@@ -80,29 +109,62 @@ public class Machine : NetworkBehaviour
             Debug.LogError($"{TAG} Creator.prefabs пуст — не из чего строить.");
             return;
         }
+        
+        // Проверяем prefabLookup
+        if (creator.prefabLookup == null || creator.prefabLookup.Count == 0)
+        {
+            Debug.LogError($"{TAG} Creator.prefabLookup пуст! Префабы должны быть сериализованы в сцене.");
+            return;
+        }
+        
+        Debug.Log($"{TAG} Creator.prefabLookup содержит {creator.prefabLookup.Count} префабов");
 
         // 1) Считаем ЦЕНТРОИД в МИРОВЫХ координатах по позициям всех клеток
         Vector3 centroid = Vector3.zero;
         int count = 0;
-        foreach (var cd in bp.cells) { centroid += cd.position; count++; }
+        foreach (var cd in bp.cells) { centroid += cd._target_world_position; count++; }
         if (count > 0) centroid /= count;
 
-        // 2) Инстансим клетки и ставим их ОТНОСИТЕЛЬНО центроида
+                // Используем ту же логику что и в Load - ищем префабы по имени
         foreach (var cd in bp.cells)
         {
-            if (cd.prefabIndex < 0 || cd.prefabIndex >= creator.prefabs.Count)
-                continue;
+            // Ищем префаб по имени в словаре Creator
+            io_base prefab = null;
+            Debug.Log($"{TAG} Ищем префаб: '{cd._prefab_name}' в prefabLookup (содержит {creator.prefabLookup.Count} префабов)");
+            
+            // Выводим доступные префабы для отладки
+            if (creator.prefabLookup.Count > 0)
+            {
+                string availablePrefabs = string.Join(", ", creator.prefabLookup.Keys.Take(5));
+                Debug.Log($"{TAG} Доступные префабы: {availablePrefabs}");
+            }
+            
+            if (!string.IsNullOrEmpty(cd._prefab_name) && creator.prefabLookup.TryGetValue(cd._prefab_name, out prefab))
+            {
+                var go = Instantiate(prefab.gameObject, visualRoot);
+                go.name = string.IsNullOrEmpty(cd.name) ? $"Cell_{cd._prefab_name}" : cd.name;
 
-            var proto = creator.prefabs[cd.prefabIndex];
-            var go    = Instantiate(proto.gameObject, visualRoot);
-            go.name   = string.IsNullOrEmpty(cd.name) ? $"Cell_{cd.prefabIndex}" : cd.name;
+                // Получаем компонент io_base
+                var cellComponent = go.GetComponent<io_base>();
+                if (cellComponent != null)
+                {
+                    // Используем полиморфную десериализацию
+                    cellComponent.DeserializeFromData(cd);
+                }
 
-            // локальная позиция относительно центроида → корень машины оказывается в центре фигуры
-            Vector3 local = cd.position - centroid;
-            go.transform.localPosition = local;
-            go.transform.localRotation = cd.rotation;
+                // локальная позиция относительно центроида → корень машины оказывается в центре фигуры
+                Vector3 local = cd._target_world_position - centroid;
+                go.transform.localPosition = local;
+                go.transform.localRotation = cd._target_world_rotation;
 
-            PrepareChildForCompound(go);
+                PrepareChildForCompound(go);
+                
+                Debug.Log($"{TAG} Created cell: {go.name} of type {cellComponent?.GetCellType() ?? "unknown"}");
+            }
+            else
+            {
+                Debug.LogWarning($"{TAG} Prefab not found: {cd._prefab_name}, skipping cell: {cd.name}");
+            }
         }
 
         // один Rigidbody только на корне

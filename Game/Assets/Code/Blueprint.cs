@@ -5,8 +5,29 @@ using System.IO.Compression; // пусть остаётся
 using System.Text;
 using UnityEngine;
 
-[Serializable] public class MachineBlueprint { public List<CellDataNet> cells = new(); }
-[Serializable] public class CellDataNet { public int prefabIndex; public Vector3 position; public Quaternion rotation; public string name; }
+[Serializable] public class MachineBlueprint { public List<io_base_serialized> cells = new(); }
+
+[Serializable]
+public class io_base_serialized
+{
+    public string _prefab_name; // Имя префаба для новой системы
+    public Vector3 _target_world_position;
+    public Quaternion _target_world_rotation;
+    public int _yaw_steps;
+    public int _status;
+    public string name;
+    public string _cell_type; // Тип клетки для наследования
+}
+
+[Serializable]
+public class io_engine_serialized : io_base_serialized
+{
+    public float force_power;
+    public int force_type; // ForceMode как int (Force, Acceleration, Impulse, VelocityChange)
+    public Vector3 force_vector_local;
+    public float fuel_per_second;
+    public float electricity_per_second;
+}
 
 public static class BlueprintCodec {
   public static byte[] ToBytes(MachineBlueprint bp) {
