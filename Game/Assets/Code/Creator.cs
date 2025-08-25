@@ -333,7 +333,7 @@ public class Creator : MonoBehaviour
         // Извлекаем prefab из каждого item_SO и добавляем в список
         foreach (var item in items_list)
         {
-            Debug.Log($"Processing item_SO: {item.name}");
+            // Debug.Log($"Processing item_SO: {item.name}");
             if (item.prefab != null)
             {
                 string prefabName = item.prefab.name;

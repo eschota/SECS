@@ -129,7 +129,7 @@ public class cam : MonoBehaviour
             followedMachine = m;
             followMachine = true;
 
-            Debug.Log($"<color=#4DA3FF>[cam]</color> attached to local machine as child at center with offset {cameraOffset}");
+            // Debug.Log($"<color=#4DA3FF>[cam]</color> attached to local machine as child at center with offset {cameraOffset}");
         }
     }
 
@@ -154,8 +154,8 @@ public class cam : MonoBehaviour
 
         initialDistanceToPivot = Vector3.Distance(_cam.transform.position, cameraPivot.transform.position);
         
-        Debug.Log($"<color=#4DA3FF>[cam]</color> attached to machine as child at center with offset {cameraOffset}");
-        Debug.Log($"<color=#4DA3FF>[cam]</color> Machine center: {m.transform.position}, LocalCenter: {m.LocalCenter}");
+        // Debug.Log($"<color=#4DA3FF>[cam]</color> attached to machine as child at center with offset {cameraOffset}");
+        // Debug.Log($"<color=#4DA3FF>[cam]</color> Machine center: {m.transform.position}, LocalCenter: {m.LocalCenter}");
     }
 
     // --- управление камерой ---

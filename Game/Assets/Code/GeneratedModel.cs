@@ -99,7 +99,7 @@ public class GeneratedModel : MonoBehaviour
         int cellsY = Mathf.CeilToInt(modelSize.y);
         int cellsZ = Mathf.CeilToInt(modelSize.z);
         
-        Debug.Log($"UpdateIOCells: Размер модели: {modelSize}, Размер клетки: {cellsX}x{cellsY}x{cellsZ}");
+        // Debug.Log($"UpdateIOCells: Размер модели: {modelSize}, Размер клетки: {cellsX}x{cellsY}x{cellsZ}");
         
         // Создаем или находим одну клетку
         io_cell singleCell = null;
@@ -122,7 +122,7 @@ public class GeneratedModel : MonoBehaviour
             singleCell.transform.localScale = new Vector3(cellsX, cellsY, cellsZ);
             singleCell.transform.localPosition = Vector3.zero;
             
-            Debug.Log($"UpdateIOCells: Клетка масштабирована до {cellsX}x{cellsY}x{cellsZ}");
+            // Debug.Log($"UpdateIOCells: Клетка масштабирована до {cellsX}x{cellsY}x{cellsZ}");
         }
     }
     
@@ -140,7 +140,7 @@ public class GeneratedModel : MonoBehaviour
         targetCollider.size = Vector3.one; // Размер 1x1x1
         targetCollider.isTrigger = true; // Делаем триггером
         
-        Debug.Log($"Создана новая io_cell с TargetCollider: {newCell.name}");
+        // Debug.Log($"Создана новая io_cell с TargetCollider: {newCell.name}");
         return ioCell;
     }
     

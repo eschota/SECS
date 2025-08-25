@@ -159,7 +159,7 @@ public class io_engine : io_base
             // Обновляем визуализацию
             UpdateParticleSystem(inputPower * rampMultiplier);
             
-            Debug.Log($"Engine {name}: rampTime={powerRampTime:F2}s, normalizedRamp={normalizedRampTime:F2}, power={currentPower:F0}");
+            // Debug.Log($"Engine {name}: rampTime={powerRampTime:F2}s, normalizedRamp={normalizedRampTime:F2}, power={currentPower:F0}");
         }
         else
         {
@@ -199,7 +199,7 @@ public class io_engine : io_base
             engineParticles.Play();
         }
         
-        Debug.Log($"Engine {name} started");
+        // Debug.Log($"Engine {name} started");
     }
     
     private void StopEngine()
@@ -224,7 +224,7 @@ public class io_engine : io_base
             engineParticles.Stop();
         }
         
-        Debug.Log($"Engine {name} stopped");
+        // Debug.Log($"Engine {name} stopped");
     }
     
     private void UpdateParticleSystem(float normalizedPower)
@@ -261,7 +261,7 @@ public class io_engine : io_base
         // Применяем силу с выбранным типом
         targetRigidbody.AddForce(worldForce, engineSettings.force_type);
         
-        Debug.Log($"Engine {name} applied force: {worldForce} with mode: {engineSettings.force_type}, power: {currentPower:F1}");
+        // Debug.Log($"Engine {name} applied force: {worldForce} with mode: {engineSettings.force_type}, power: {currentPower:F1}");
     }
 
 #if UNITY_EDITOR

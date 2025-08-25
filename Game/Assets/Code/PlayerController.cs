@@ -142,7 +142,7 @@ public class PlayerController : NetworkBehaviour
             {
                 currentMachine = machine;
                 machineRigidbody = machine.GetComponent<Rigidbody>();
-                Debug.Log($"PlayerController: Найдена машина {machine.name}");
+                // Debug.Log($"PlayerController: Найдена машина {machine.name}");
                 break;
             }
         }
@@ -158,12 +158,12 @@ public class PlayerController : NetworkBehaviour
         var engineComponents = currentMachine.GetComponentsInChildren<io_engine>(true);
         engines.AddRange(engineComponents);
         
-        Debug.Log($"PlayerController: Найдено {engines.Count} двигателей в машине");
+        // Debug.Log($"PlayerController: Найдено {engines.Count} двигателей в машине");
         foreach (var engine in engines)
         {
             if (engine.engineSettings != null)
             {
-                Debug.Log($"PlayerController: Двигатель {engine.name} - направление: {engine.engineSettings.force_vector_local}, мощность: {engine.engineSettings.force_power}");
+                // Debug.Log($"PlayerController: Двигатель {engine.name} - направление: {engine.engineSettings.force_vector_local}, мощность: {engine.engineSettings.force_power}");
             }
             else
             {
@@ -259,7 +259,7 @@ public class PlayerController : NetworkBehaviour
                 // Применяем силу через новый метод
                 engine.ApplyForce(machineRigidbody);
                 
-                Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}");
+                // Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}");
             }
             else
             {

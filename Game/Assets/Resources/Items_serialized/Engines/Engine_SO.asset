@@ -12,22 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8859859a7b1d58419dae67d76af3429, type: 3}
   m_Name: Engine_SO
   m_EditorClassIdentifier: 
-  force_power: 1
+  force_power: 10
   force_type: 5
   force_vector_local: {x: -1, y: 0, z: 0}
   fuel_per_second: 10
   electricity_per_second: 5
   particlePrefab: {fileID: 0}
   minEmissionRate: 0
-  maxEmissionRate: 0
-  minStartSpeed: 0
-  maxStartSpeed: 0
+  maxEmissionRate: 100
+  minStartSpeed: 3
+  maxStartSpeed: 10
   minStartSize: 0
-  maxStartSize: 0
-  particleColor: {r: 0, g: 0.8365009, b: 0.9764706, a: 1}
-  particleLifetime: 0
-  particleFadeInTime: 0
-  particleFadeOutTime: 0
+  maxStartSize: 1
+  particleColor: {r: 1, g: 1, b: 1, a: 1}
+  particleLifetime: 2
+  particleFadeInTime: 0.5
+  particleFadeOutTime: 0.5
   engineStartupTime: 0
   engineShutdownTime: 0
   force_max_timer: 0

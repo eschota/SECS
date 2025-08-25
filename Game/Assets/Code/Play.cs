@@ -97,14 +97,14 @@ public void TogglePlayMode()
         currentState = State.SimulateOnline;
         if (spawner) 
         {
-            Debug.Log($"Found spawner: {spawner.name}, HasInputAuthority: {spawner.Object?.HasInputAuthority}");
+            // Debug.Log($"Found spawner: {spawner.name}, HasInputAuthority: {spawner.Object?.HasInputAuthority}");
             spawner.RequestSpawnFromCreator();
         }
         else
         {
             Debug.LogWarning("No MachineSpawnClient found!");
         }
-        Debug.Log("Switched to simulation mode");
+        // Debug.Log("Switched to simulation mode");
         OnPlayStateChange?.Invoke(currentState);
     }
     else
@@ -116,7 +116,7 @@ public void TogglePlayMode()
         ResetHull();
          
         
-        Debug.Log("Switched to creation mode");
+        // Debug.Log("Switched to creation mode");
         OnPlayStateChange?.Invoke(currentState);
     }
 }
@@ -173,7 +173,7 @@ public void TogglePlayMode()
             {
                 _creator.current_prefab.transform.position = new Vector3(0, 0, 0);
                 _creator.current_prefab.target_world_position = new Vector3(0, 0, 0);
-                Debug.Log("Current cell returned to normal position");
+                // Debug.Log("Current cell returned to normal position");
                 _creator.current_prefab.TurnColliders(false);
                 _creator.current_prefab.targetRigidbody.isKinematic = true; 
             }
@@ -185,7 +185,7 @@ public void TogglePlayMode()
                     // Отключаем физику и возвращаем в исходную позицию
                     cell.targetRigidbody.isKinematic = true; 
                     
-                    Debug.Log($"Cell {cell.name} reset to original position");
+                    // Debug.Log($"Cell {cell.name} reset to original position");
                 }
             }
         }
@@ -210,6 +210,6 @@ public void TogglePlayMode()
                 cell.Status = newStatus;
             }
         }
-        Debug.Log($"Set all cells to {newStatus}");
+        // Debug.Log($"Set all cells to {newStatus}");
     }
 }
