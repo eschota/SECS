@@ -9,12 +9,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a82ee4b0730149498cc727d93d268d2, type: 3}
-  m_Name: Rocket_Launcher_001
+  m_Script: {fileID: 11500000, guid: 7f006ba111dd81b428289f69b2cbff50, type: 3}
+  m_Name: rocket_launcher
   m_EditorClassIdentifier: 
-  prefab: {fileID: 5863668223384983802, guid: 1a876506eb86b7c408f439279451c45b, type: 3}
+  prefab: {fileID: 3434781656936687460, guid: 1a876506eb86b7c408f439279451c45b, type: 3}
   icon: {fileID: 21300000, guid: de77a0299e30f5943b66d6eff2bb5191, type: 3}
-  Title: Rocket Launcher
+  Title: rocket_launcher
   Description: 
   currentToolTipType: 0
   toolTipTextColor: 0
+  weapon_index: 1
+  fireRate: 1
+  magazineSize: 6
+  upload_ammo_per_second: 0
+  maxAmmo: 6
+  bullet_SO: {fileID: 11400000, guid: efd6e74e1a4a9ff4ba9f5493765e7dac, type: 2}

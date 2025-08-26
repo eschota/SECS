@@ -104,7 +104,7 @@ public class io_base : MonoBehaviour
         }
     }
 
-    void OnValidate()
+    public virtual void OnValidate()
     {
         target_cells = GetComponentsInChildren<io_cell>().OrderBy(c => c.name).ToArray();
         status_definitions.Clear();
@@ -112,6 +112,10 @@ public class io_base : MonoBehaviour
         if (status_definitions.Count == 0)
         {
             Debug.LogWarning("No status definitions found in Resources/Statuses. Please create them and name them in order (e.g., 0_None, 1_Creating).");
+        }
+        if(targetRigidbody == null)
+        {
+            targetRigidbody = gameObject.GetComponent<Rigidbody>();
         }
     }
 

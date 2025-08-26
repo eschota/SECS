@@ -123,7 +123,7 @@ public class Creator : MonoBehaviour
                 
                 // Логируем созданную клетку с её типом
                 string cellType = _current_prefab.GetCellType();
-                Debug.Log($"Created current_prefab: {_current_prefab.name} of type: {cellType}");
+//                Debug.Log($"Created current_prefab: {_current_prefab.name} of type: {cellType}");
             }
             return _current_prefab;
         }
@@ -341,7 +341,7 @@ public class Creator : MonoBehaviour
                 
                 // Проверяем тип префаба и логируем
                 string cellType = item.prefab.GetCellType();
-                Debug.Log($"  - Prefab type: {cellType}, name: {prefabName}");
+               // Debug.Log($"  - Prefab type: {cellType}, name: {prefabName}");
                 
                 prefabs.Add(item.prefab);
                 // Добавляем в словарь для быстрого поиска по имени
@@ -397,7 +397,7 @@ public class Creator : MonoBehaviour
             
             // Логируем созданную клетку с её типом
             string cellType = new_prefab.GetCellType();
-            Debug.Log($"Placed cell: {new_prefab.name} of type: {cellType}");
+//            Debug.Log($"Placed cell: {new_prefab.name} of type: {cellType}");
             
             return;
         }

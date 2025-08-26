@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Engine_SO", menuName = "Game/Engine Settings")]
-public class Engine_SO : ScriptableObject
+public class Engine_SO : item_SO
 {
     [Header("Engine Physics")]
     [SerializeField] public float force_power = 1000f;

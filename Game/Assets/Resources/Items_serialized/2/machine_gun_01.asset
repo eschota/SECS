@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f006ba111dd81b428289f69b2cbff50, type: 3}
+  m_Name: machine_gun_01
+  m_EditorClassIdentifier: 
+  prefab: {fileID: 8645087148888645613, guid: 562a2a248e1a6424986c429a22e6d55e, type: 3}
+  icon: {fileID: 21300000, guid: 34e6ef7e8ccff2a419a7c308c1a29661, type: 3}
+  Title: machine_gun
+  Description: 
+  currentToolTipType: 0
+  toolTipTextColor: 0
+  weapon_index: 0
+  fireRate: 1
+  magazineSize: 600
+  upload_ammo_per_second: 1
+  maxAmmo: 600
+  bullet_SO: {fileID: 11400000, guid: 8cb17e990acc1724f8489dfaead9ae25, type: 2}

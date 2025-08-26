@@ -51,6 +51,7 @@ public class UI_Canvas : MonoBehaviour
     public UI_Button[] selectedSubButtons; // One selected button per sub group
     public List<UI_Button> all_sub_buttons= new List<UI_Button>();
     public static UI_Canvas i;
+    [SerializeField]public ui_engine_burst engine_burst;
 
     public static event System.Action<UI_Button> UI_ChangeState;
     // Update is called once per frame

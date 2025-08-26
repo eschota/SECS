@@ -9,12 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a82ee4b0730149498cc727d93d268d2, type: 3}
-  m_Name: Turret_01
+  m_Script: {fileID: 11500000, guid: a53f74f0253d03e418f63ac1a26443af, type: 3}
+  m_Name: bullet_rocket_SO
   m_EditorClassIdentifier: 
-  prefab: {fileID: 5863668223384983802, guid: 562a2a248e1a6424986c429a22e6d55e, type: 3}
-  icon: {fileID: 21300000, guid: b0fd1212df834f740bea9b1e442eb285, type: 3}
-  Title: Turret
+  prefab: {fileID: 8923334035444187525, guid: 00782568ce1d095419759e886b675f9e, type: 3}
+  icon: {fileID: 21300000, guid: 924f493154c5b044099643b20694af7e, type: 3}
+  Title: bullet_rocket
   Description: 
   currentToolTipType: 0
   toolTipTextColor: 0
+  type_bullet: 0
+  damage: 100
+  speed: 1
+  range: 99999

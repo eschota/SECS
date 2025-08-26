@@ -14,8 +14,12 @@ public class PlayerController : NetworkBehaviour
     
     // Система управления двигателями
     private List<io_engine> engines = new List<io_engine>();
+    private List<io_weapon> weapons = new List<io_weapon>();
     private Machine currentMachine;
     private Rigidbody machineRigidbody;
+    
+    // Система емкости двигателей 
+    private bool isEngineOverheated = false;
 
     public override void Spawned()
     {
@@ -40,19 +44,19 @@ public class PlayerController : NetworkBehaviour
     {
         if (!Object || !Object.HasInputAuthority) return;
         
-        // Поиск машины и двигателей при переходе в режим симуляции
-        if (Play.i?.currentState == Play.State.SimulateOnline && engines.Count == 0)
-        {
-            FindMachineAndEngines();
-        }
+        // Обновляем состояние перегрева двигателей
+        UpdateEngineOverheatState();
+        
+        // Управление оружием
+        HandleWeaponControl();
     }
     
     private void OnPlayStateChange(Play.State state)
     {
         if (state == Play.State.SimulateOnline)
         {
-            // При переходе в режим симуляции ищем машину и двигатели
-            FindMachineAndEngines();
+            // При переходе в режим симуляции ищем машину и модули
+            InitMachineModules();
         }
     }
 
@@ -129,9 +133,9 @@ public class PlayerController : NetworkBehaviour
         Play.OnPlayStateChange -= OnPlayStateChange;
     }
     
-    // ========== СИСТЕМА УПРАВЛЕНИЯ ДВИГАТЕЛЯМИ ==========
+    // ========== СИСТЕМА УПРАВЛЕНИЯ МОДУЛЯМИ ==========
     
-    private void FindMachineAndEngines()
+    private void InitMachineModules()
     {
         // Ищем свою машину
         var machines = FindObjectsOfType<Machine>();
@@ -146,7 +150,7 @@ public class PlayerController : NetworkBehaviour
                 break;
             }
         }
-        
+    
         if (currentMachine == null)
         {
             Debug.LogWarning("PlayerController: Машина не найдена!");
@@ -158,7 +162,31 @@ public class PlayerController : NetworkBehaviour
         var engineComponents = currentMachine.GetComponentsInChildren<io_engine>(true);
         engines.AddRange(engineComponents);
         
-        // Debug.Log($"PlayerController: Найдено {engines.Count} двигателей в машине");
+        // Ищем все оружия в машине
+        weapons.Clear();
+        var weaponComponents = currentMachine.GetComponentsInChildren<io_weapon>(true);
+        weapons.AddRange(weaponComponents);
+        
+        Debug.Log($"PlayerController: Найдено {weapons.Count} оружий в машине");
+        
+        // Инициализируем оружия
+        foreach (var weapon in weapons)
+        {
+            if (weapon.weapon_SO != null)
+            {
+                weapon.InitializeWeapon(Runner);
+                Debug.Log($"PlayerController: Оружие {weapon.name} - индекс: {weapon.weapon_SO.weapon_index}, патроны: {weapon.GetCurrentAmmo()}/{weapon.GetMaxAmmo()}");
+            }
+            else
+            {
+                Debug.LogWarning($"PlayerController: Оружие {weapon.name} не имеет настроек Weapon_SO!");
+            }
+        }
+        
+        // Ищем UI компонент для емкости двигателей
+        
+        
+        // Debug.Log($"PlayerController: Найдено {engines.Count} двигателей и {weapons.Count} оружий в машине");
         foreach (var engine in engines)
         {
             if (engine.engineSettings != null)
@@ -172,9 +200,40 @@ public class PlayerController : NetworkBehaviour
         }
     }
     
+    private void UpdateEngineOverheatState()
+    {
+        // Проверяем состояние перегрева через UI компонент
+        if (UI_Canvas.i.engine_burst != null)
+        {
+            // Используем рефлексию для доступа к приватным полям
+            var disableTimerField = typeof(ui_engine_burst).GetField("DisableTimer", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var isOverheatedField = typeof(ui_engine_burst).GetField("isOverheated", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (disableTimerField != null && isOverheatedField != null)
+            {
+                float disableTimer = (float)disableTimerField.GetValue(UI_Canvas.i.engine_burst);
+                bool isOverheated = (bool)isOverheatedField.GetValue(UI_Canvas.i.engine_burst);
+                
+                isEngineOverheated = disableTimer > 0 || isOverheated;
+            }
+        }
+    }
+    
     private void HandleEngineControl()
     {
         if (engines.Count == 0 || machineRigidbody == null) return;
+        
+        // Если двигатели перегреты - отключаем их полностью
+        if (isEngineOverheated)
+        {
+            foreach (var engine in engines)
+            {
+                engine.UpdateEngineState(0f, Time.fixedDeltaTime);
+            }
+            return;
+        }
         
         Vector3 targetDirection = Vector3.zero;
         
@@ -237,6 +296,30 @@ public class PlayerController : NetworkBehaviour
     
     private void ApplyEnginesForce(Vector3 targetDirection)
     {
+        bool isShiftPressed = Input.GetKey(KeyCode.LeftShift);
+        float powerMultiplier = 1f;
+        
+        // Проверяем емкость двигателей при зажатом Shift
+        if (isShiftPressed && UI_Canvas.i.engine_burst != null)
+        {
+            // Используем рефлексию для доступа к приватному полю engine_capacity
+            var engineCapacityField = typeof(ui_engine_burst).GetField("engine_capacity", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (engineCapacityField != null)
+            {
+                var engineCapacity = engineCapacityField.GetValue(UI_Canvas.i.engine_burst) as UnityEngine.UI.Image;
+                if (engineCapacity != null && engineCapacity.fillAmount > 0)
+                {
+                    powerMultiplier = 2f; // Удваиваем мощность при наличии емкости
+                }
+                else
+                {
+                    powerMultiplier = 0f; // Отключаем двигатели если емкость кончилась
+                }
+            }
+        }
+        
         foreach (var engine in engines)
         {
             if (engine.engineSettings == null) continue;
@@ -253,18 +336,78 @@ public class PlayerController : NetworkBehaviour
                 // Вычисляем эффективность двигателя (1.0 = полная эффективность, 0.0 = неэффективен)
                 float effectiveness = Mathf.Cos(angle * Mathf.Deg2Rad);
                 
+                // Применяем множитель мощности
+                effectiveness *= powerMultiplier;
+                
                 // Обновляем состояние двигателя на основе эффективности
                 engine.UpdateEngineState(effectiveness, Time.fixedDeltaTime);
                 
                 // Применяем силу через новый метод
                 engine.ApplyForce(machineRigidbody);
                 
-                // Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}");
+                // Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}, множитель {powerMultiplier}");
             }
             else
             {
                 // Двигатель не эффективен в этом направлении - останавливаем его
                 engine.UpdateEngineState(0f, Time.fixedDeltaTime);
+            }
+        }
+    }
+    
+    // ========== СИСТЕМА УПРАВЛЕНИЯ ОРУЖИЕМ ==========
+    
+    private void HandleWeaponControl()
+    {
+        if (weapons.Count == 0) return;
+        
+        // Определяем направление стрельбы (вперед относительно камеры)
+        Vector3 fireDirection = Vector3.forward;
+        if (Camera.main != null)
+        {
+            fireDirection = Camera.main.transform.forward;
+            fireDirection.y = 0; // Проецируем на горизонтальную плоскость
+            fireDirection.Normalize();
+        }
+        
+        // Левый клик мыши - стреляет оружием с weapon_index == 0
+        if (Input.GetMouseButtonDown(0))
+        {
+            Debug.Log($"PlayerController: Левый клик мыши! Стреляем оружием 0");
+            FireWeapon(0, fireDirection);
+        }
+        
+        // Цифры 1-5 - стреляют соответствующими оружиями
+        for (int i = 1; i <= 5; i++)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha0 + i))
+            {
+                FireWeapon(i, fireDirection);
+            }
+        }
+    }
+    
+    private void FireWeapon(int weaponIndex, Vector3 direction)
+    {
+        Debug.Log($"PlayerController: FireWeapon вызван для индекса {weaponIndex}");
+        
+        // Ищем оружие с нужным индексом
+        foreach (var weapon in weapons)
+        {
+            if (weapon.weapon_SO != null && weapon.weapon_SO.weapon_index == weaponIndex)
+            {
+                Debug.Log($"PlayerController: Найдено оружие {weapon.name} с индексом {weaponIndex}");
+                
+                if (weapon.CanFire())
+                {
+                    weapon.Fire(Runner, direction);
+                    Debug.Log($"PlayerController: Выстрел из оружия {weapon.name} (индекс {weaponIndex})");
+                }
+                else
+                {
+                    Debug.Log($"PlayerController: Оружие {weapon.name} не может стрелять (патроны: {weapon.GetCurrentAmmo()}/{weapon.GetMaxAmmo()})");
+                }
+                break; // Стреляем только из первого найденного оружия с нужным индексом
             }
         }
     }

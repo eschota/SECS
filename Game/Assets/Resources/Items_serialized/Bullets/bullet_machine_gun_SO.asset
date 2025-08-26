@@ -9,12 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a82ee4b0730149498cc727d93d268d2, type: 3}
-  m_Name: Rocket_Launcher_002
+  m_Script: {fileID: 11500000, guid: a53f74f0253d03e418f63ac1a26443af, type: 3}
+  m_Name: bullet_machine_gun_SO
   m_EditorClassIdentifier: 
-  prefab: {fileID: 5863668223384983802, guid: f74535796faacba44acd28d3340327b3, type: 3}
-  icon: {fileID: 21300000, guid: ef643055715e1d2448b6004174a876ea, type: 3}
-  Title: Rocket Launcher
+  prefab: {fileID: 696438750649157698, guid: 330b9922b053c2d4ba0a06d01f7e3248, type: 3}
+  icon: {fileID: 21300000, guid: 584c6e27afa3441d4845c7385a312456, type: 3}
+  Title: bullet machine gun
   Description: 
   currentToolTipType: 0
   toolTipTextColor: 0
+  type_bullet: 0
+  damage: 1
+  speed: 1
+  range: 99999

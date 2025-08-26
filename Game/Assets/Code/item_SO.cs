@@ -17,4 +17,3 @@ public class item_SO : ScriptableObject
     public ToolTipTextColor toolTipTextColor = ToolTipTextColor.Default;
 }
 
-
