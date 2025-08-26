@@ -30,8 +30,9 @@ public class io_cell : MonoBehaviour
 
     void OnDrawGizmos()
     {
+        if(Play.i?.currentState == Play.State.SimulateLocal) return;
         // draw cube by possible to place color
-        if(possible_to_place)
+        if (possible_to_place)
         {
             Gizmos.color = Color.green;
         }
@@ -44,8 +45,5 @@ public class io_cell : MonoBehaviour
         Gizmos.DrawCube(transform.localPosition, Vector3.one);
     }
     // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    
 }

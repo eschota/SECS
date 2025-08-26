@@ -1,52 +1,68 @@
 using Fusion;
 using UnityEngine;
 
+[RequireComponent(typeof(NetworkObject))]
+[RequireComponent(typeof(Rigidbody))]
 public class BulletNet : NetworkBehaviour
 {
-    [Networked] public Vector3 Direction { get; set; }
-    [Networked] public float   Speed     { get; set; }
-    [Networked] public float   Range     { get; set; }
-    [Networked] public Vector3 StartPos  { get; set; }
+    [Networked] public Vector3 Direction       { get; set; }  // мировое направление из pivot.forward (нормализовано)
+    [Networked] public float   Speed           { get; set; }   // из SO
+    [Networked] public float   Range           { get; set; }   // из SO
+    [Networked] public Vector3 StartPos        { get; set; }   // позиция спавна
+    [Networked] public Vector3 InheritVelocity { get; set; }   // velocity корабля на момент выстрела
 
-    private io_bullet _bullet; // ваш компонент для локальной логики/данных
+    [SerializeField] private io_bullet _bullet;
 
-    private void Awake()
+    private Rigidbody _rb;
+
+    void Awake()
     {
-        _bullet = GetComponent<io_bullet>();
+        _rb = GetComponent<Rigidbody>();
+        if (_bullet == null) _bullet = GetComponent<io_bullet>();
+
+        // пуля управляется нами, гравитация не нужна (космос)
+        _rb.useGravity = false;
+        _rb.isKinematic = false;
+        _rb.interpolation = RigidbodyInterpolation.None; // интерполяция делает Fusion
+        _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
     }
 
-    // вызывать из onBeforeSpawned
-    public void Setup(Bullet_SO so, Vector3 worldDir)
-    {
-        Direction = worldDir.sqrMagnitude > 0.0001f ? worldDir.normalized : Vector3.forward;
-        Speed     = (so != null && so.speed  > 0f) ? so.speed  : 10f;
-        Range     = (so != null && so.range  > 0f) ? so.range  : 50f;
-        StartPos  = transform.position;
+    /// <summary>Заполняется в onBeforeSpawned из io_weapon.</summary>
+public void Setup(Bullet_SO so, Vector3 worldDir, Vector3 inheritVel, Vector3 upHint)
+{
+    Direction       = worldDir.sqrMagnitude > 1e-4f ? worldDir.normalized : Vector3.forward;
+    Speed           = (so && so.speed > 0f) ? so.speed : 10f;
+    Range           = (so && so.range > 0f) ? so.range : 50f;
+    InheritVelocity = inheritVel;                       // ← ВАЖНО
+    StartPos        = transform.position;
 
-        // повернём визуал по направлению
-        transform.forward = Direction;
+    transform.rotation = Quaternion.LookRotation(Direction, upHint.sqrMagnitude>0 ? upHint : Vector3.up);
+}
 
-        // если нужно — дайте знать io_bullet про SO (без движения)
-        if (_bullet != null && so != null)
-        {
-            _bullet.bullet_SO = so;
-            // здесь можно вызвать ваш InitializeBullet, но без перемещения/Time.deltaTime
-        }
-    }
 
-    public override void FixedUpdateNetwork()
-    {
-        // только обладатель state authority двигает
-        if (!Object.HasStateAuthority) return;
+  public override void FixedUpdateNetwork()
+{
+    if (!Object.HasStateAuthority) return;
 
-        transform.position += Direction * Speed * Runner.DeltaTime;
+    // Собственная скорость + скорость корабля
+    _rb.linearVelocity = Direction * Speed + InheritVelocity;   // ← ВАЖНО
 
-        if ((transform.position - StartPos).sqrMagnitude >= Range * Range)
-            Runner.Despawn(Object);
-    }
+    if ((transform.position - StartPos).sqrMagnitude >= Range * Range)
+        Runner.Despawn(Object);
+}
+
 
     private void OnTriggerEnter(Collider other)
     {
+        // чтобы не убивать пулю коллайдером носителя сразу в месте спавна
+        if ((transform.position - StartPos).sqrMagnitude <= 1f) return;
+        if (!Object.HasStateAuthority) return;
+        Runner.Despawn(Object);
+    }
+
+    private void OnCollisionEnter(Collision other)
+    {
+        if ((transform.position - StartPos).sqrMagnitude <= 1f) return;
         if (!Object.HasStateAuthority) return;
         Runner.Despawn(Object);
     }

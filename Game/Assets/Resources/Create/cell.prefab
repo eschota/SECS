@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5110713563624422485}
   - component: {fileID: 4706144106642954781}
   - component: {fileID: 5863668223384983802}
+  - component: {fileID: 1684992314097470515}
   m_Layer: 6
   m_Name: cell
   m_TagString: Untagged
@@ -54,12 +55,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 098d2543a7ae89d4492e6ba13332bfe3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  yawSteps: 0
   status_list: 
   io_base_cell_type: 0
   target_cells:
   - {fileID: 180171793037360650}
   target_world_position: {x: 0, y: 12, z: 0}
   target_world_rotation: {x: 0, y: 0, z: 0, w: 1}
+  generated_models:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   status_definitions:
   - {fileID: 11400000, guid: 1c828a750d8b7f742bd2d78dce3dc5fc, type: 2}
   - {fileID: 11400000, guid: 4d1c40b7c1bb4884da4c096a360461f5, type: 2}
@@ -74,9 +80,37 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ee54cade5c8643e42bb1cb78fed90615, type: 2}
   - {fileID: 11400000, guid: 67f16b8a5d9e40f4f9b4a8cd25fb5f65, type: 2}
   - {fileID: 11400000, guid: e0d705ca3db931c45a9cd9f402a53755, type: 2}
-  targetRigidbody: {fileID: 6959628718673731917}
+  prefab_name: 
+  targetRigidbody: {fileID: 1684992314097470515}
   statusTransitionTimer: 0
   _status: 0
+--- !u!54 &1684992314097470515
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1826940032870503286}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &6398392419181108641
 GameObject:
   m_ObjectHideFlags: 0
@@ -89,7 +123,6 @@ GameObject:
   - component: {fileID: 3419174952115106650}
   - component: {fileID: 180171793037360650}
   - component: {fileID: 1799926704355516075}
-  - component: {fileID: 6959628718673731917}
   m_Layer: 6
   m_Name: box
   m_TagString: Untagged
@@ -161,33 +194,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &6959628718673731917
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6398392419181108641}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
 --- !u!1001 &1936719712275886009
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -259,6 +265,10 @@ PrefabInstance:
     - target: {fileID: 3451118302482216456, guid: 3b573b34459088a4eb51a774822a01e9, type: 3}
       propertyPath: m_Convex
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3451118302482216456, guid: 3b573b34459088a4eb51a774822a01e9, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

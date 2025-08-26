@@ -268,7 +268,7 @@ public class io_engine : io_base
     private void OnDrawGizmos()
     {
         if (engineSettings == null) return;
-        
+        if(Play.i?.currentState == Play.State.SimulateLocal) return;
         // Рисуем стрелку направления силы
         Gizmos.color = Color.red;
         Vector3 start = transform.position;

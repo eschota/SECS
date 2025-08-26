@@ -32,6 +32,10 @@ public class cam : MonoBehaviour
 
     // layer for io_base
     private LayerMask ioBaseMask;
+    
+    // FreeCam integration
+    private FreeCam freeCam;
+    private bool freeCamActive = false;
 
     void Awake()
     {
@@ -46,6 +50,9 @@ public class cam : MonoBehaviour
 
         Play.OnPlayStateChange += OnPlayStateChange;
         Machine.OnLocalMachineReady += OnLocalMachineReady;
+        
+        // Спавним FreeCam
+        SpawnFreeCam();
     }
 
     void OnDestroy()
@@ -54,9 +61,15 @@ public class cam : MonoBehaviour
         Machine.OnLocalMachineReady -= OnLocalMachineReady;
     }
 
-    void Update()
+    void LateUpdate()
     {
         if (UI_Canvas.i?.currentState == UI_Canvas.UI_State.Chatting) return;
+
+        // Проверяем переключение камер по Tab
+        HandleCameraSwitch();
+
+        // Если FreeCam активна, не обрабатываем управление основной камерой
+        if (freeCamActive) return;
 
         // Разделяем логику для разных режимов
         if (Play.i?.currentState == Play.State.Create)
@@ -337,5 +350,69 @@ public class cam : MonoBehaviour
                 }
                 if (closest) target_pivot_position = closest.transform.position;
             }
+    }
+
+    // --- FreeCam Integration ---
+    
+    void SpawnFreeCam()
+    {
+        // Создаем GameObject для FreeCam
+        GameObject freeCamGO = new GameObject("FreeCam");
+        freeCam = freeCamGO.AddComponent<FreeCam>();
+        
+        // Настраиваем FreeCam
+        freeCam._cam = _cam;
+        
+        // Размещаем рядом с основной камерой
+        freeCamGO.transform.position = transform.position;
+        
+        Debug.Log("<color=#4DA3FF>[cam]</color> FreeCam spawned");
+    }
+
+    void HandleCameraSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            if (freeCamActive)
+            {
+                // Переключаемся обратно на основную камеру
+                SwitchToMainCamera();
+            }
+            else
+            {
+                // Переключаемся на FreeCam
+                SwitchToFreeCam();
+            }
+        }
+    }
+
+    void SwitchToFreeCam()
+    {
+        if (freeCam == null) return;
+        
+        // Отключаем основной скрипт камеры
+        enabled = false;
+        
+        // Активируем FreeCam
+        freeCam.Activate();
+        
+        freeCamActive = true;
+        
+        Debug.Log("<color=#4DA3FF>[cam]</color> Switched to FreeCam");
+    }
+
+    void SwitchToMainCamera()
+    {
+        if (freeCam == null) return;
+        
+        // Деактивируем FreeCam
+        freeCam.Deactivate();
+        
+        // Включаем основной скрипт камеры
+        enabled = true;
+        
+        freeCamActive = false;
+        
+        Debug.Log("<color=#4DA3FF>[cam]</color> Switched to Main Camera");
     }
 }

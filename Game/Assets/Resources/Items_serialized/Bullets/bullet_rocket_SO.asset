@@ -20,5 +20,5 @@ MonoBehaviour:
   toolTipTextColor: 0
   type_bullet: 0
   damage: 100
-  speed: 1
+  speed: 10
   range: 99999

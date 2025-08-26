@@ -11,55 +11,39 @@ public class PlayerController : NetworkBehaviour
 
     private Material[] originalMaterials;
     private Material[] coloredMaterials;
-    
-    // Система управления двигателями
+
+    // Модули корабля
     private List<io_engine> engines = new List<io_engine>();
     private List<io_weapon> weapons = new List<io_weapon>();
     private Machine currentMachine;
     private Rigidbody machineRigidbody;
-    
-    // Система емкости двигателей 
+
+    // Перегрев двигателей (UI)
     private bool isEngineOverheated = false;
+
+    // ─────────────────────────────────────────────────────────────────────────────
 
     public override void Spawned()
     {
         ValidateAndSerializeMeshRenderers();
         GenerateRandomBrightColor();
         ApplyEmissiveColor();
-        
-        // Подписываемся на изменение состояния игры
+
         Play.OnPlayStateChange += OnPlayStateChange;
     }
 
-    // ДВИЖЕНИЕ ТОЛЬКО У ВЛАДЕЛЬЦА!
-    private void FixedUpdate()
+    private void OnDestroy()
     {
-        if (!Object || !Object.HasInputAuthority) return;
+        Play.OnPlayStateChange -= OnPlayStateChange;
+    }
 
-        // Управление двигателями
-        HandleEngineControl();
-    }
-    
-    private void Update()
-    {
-        if (!Object || !Object.HasInputAuthority) return;
-        
-        // Обновляем состояние перегрева двигателей
-        UpdateEngineOverheatState();
-        
-        // Управление оружием
-        HandleWeaponControl();
-    }
-    
     private void OnPlayStateChange(Play.State state)
     {
         if (state == Play.State.SimulateOnline)
-        {
-            // При переходе в режим симуляции ищем машину и модули
             InitMachineModules();
-        }
     }
 
+    // ─────────────────────────── РЕНДЕР / ВИЗУАЛ ────────────────────────────────
     [ContextMenu("Validate Mesh Renderers")]
     void ValidateAndSerializeMeshRenderers()
     {
@@ -126,289 +110,207 @@ public class PlayerController : NetworkBehaviour
 
     public void SetPlayerColor(Color c) { playerColor = c; ApplyEmissiveColor(); }
     public Color GetPlayerColor() => playerColor;
-    
-    private void OnDestroy()
-    {
-        // Отписываемся от событий
-        Play.OnPlayStateChange -= OnPlayStateChange;
-    }
-    
-    // ========== СИСТЕМА УПРАВЛЕНИЯ МОДУЛЯМИ ==========
-    
+
+    // ──────────────────────── ПОИСК МОДУЛЕЙ МАШИНЫ ──────────────────────────────
     private void InitMachineModules()
     {
-        // Ищем свою машину
+        // Ищем свою машину по InputAuthority
         var machines = FindObjectsOfType<Machine>();
         foreach (var machine in machines)
         {
-            var networkObject = machine.GetComponent<NetworkObject>();
-            if (networkObject != null && networkObject.InputAuthority == Object.InputAuthority)
+            var no = machine.GetComponent<NetworkObject>();
+            if (no != null && no.InputAuthority == Object.InputAuthority)
             {
                 currentMachine = machine;
                 machineRigidbody = machine.GetComponent<Rigidbody>();
-                // Debug.Log($"PlayerController: Найдена машина {machine.name}");
                 break;
             }
         }
-    
+
         if (currentMachine == null)
         {
             Debug.LogWarning("PlayerController: Машина не найдена!");
             return;
         }
-        
-        // Ищем все двигатели в машине
+
+        // Двигатели
         engines.Clear();
-        var engineComponents = currentMachine.GetComponentsInChildren<io_engine>(true);
-        engines.AddRange(engineComponents);
-        
-        // Ищем все оружия в машине
+        engines.AddRange(currentMachine.GetComponentsInChildren<io_engine>(true));
+
+        // Оружие
         weapons.Clear();
-        var weaponComponents = currentMachine.GetComponentsInChildren<io_weapon>(true);
-        weapons.AddRange(weaponComponents);
-        
-        Debug.Log($"PlayerController: Найдено {weapons.Count} оружий в машине");
-        
-        // Инициализируем оружия
+        weapons.AddRange(currentMachine.GetComponentsInChildren<io_weapon>(true));
+
+        // Инициализация оружий
         foreach (var weapon in weapons)
         {
             if (weapon.weapon_SO != null)
             {
                 weapon.InitializeWeapon(Runner);
-                Debug.Log($"PlayerController: Оружие {weapon.name} - индекс: {weapon.weapon_SO.weapon_index}, патроны: {weapon.GetCurrentAmmo()}/{weapon.GetMaxAmmo()}");
+                // Debug.Log($"Weapon {weapon.name}: idx={weapon.weapon_SO.weapon_index} ammo {weapon.GetCurrentAmmo()}/{weapon.GetMaxAmmo()}");
             }
             else
             {
-                Debug.LogWarning($"PlayerController: Оружие {weapon.name} не имеет настроек Weapon_SO!");
-            }
-        }
-        
-        // Ищем UI компонент для емкости двигателей
-        
-        
-        // Debug.Log($"PlayerController: Найдено {engines.Count} двигателей и {weapons.Count} оружий в машине");
-        foreach (var engine in engines)
-        {
-            if (engine.engineSettings != null)
-            {
-                // Debug.Log($"PlayerController: Двигатель {engine.name} - направление: {engine.engineSettings.force_vector_local}, мощность: {engine.engineSettings.force_power}");
-            }
-            else
-            {
-                Debug.LogWarning($"PlayerController: Двигатель {engine.name} не имеет настроек Engine_SO!");
+                Debug.LogWarning($"PlayerController: Оружие {weapon.name} не имеет Weapon_SO!");
             }
         }
     }
-    
-    private void UpdateEngineOverheatState()
+
+    // ─────────────────────────── СЕТЕВАЯ ФИЗИКА ─────────────────────────────────
+    // Все силы/движение — только здесь и только на StateAuthority.
+    public override void FixedUpdateNetwork()
     {
-        // Проверяем состояние перегрева через UI компонент
-        if (UI_Canvas.i.engine_burst != null)
-        {
-            // Используем рефлексию для доступа к приватным полям
-            var disableTimerField = typeof(ui_engine_burst).GetField("DisableTimer", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var isOverheatedField = typeof(ui_engine_burst).GetField("isOverheated", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            if (disableTimerField != null && isOverheatedField != null)
-            {
-                float disableTimer = (float)disableTimerField.GetValue(UI_Canvas.i.engine_burst);
-                bool isOverheated = (bool)isOverheatedField.GetValue(UI_Canvas.i.engine_burst);
-                
-                isEngineOverheated = disableTimer > 0 || isOverheated;
-            }
-        }
+        if (!Object || !Object.HasStateAuthority) return;
+        HandleEngineControlNetwork();
     }
-    
-    private void HandleEngineControl()
+
+    private void HandleEngineControlNetwork()
     {
         if (engines.Count == 0 || machineRigidbody == null) return;
-        
-        // Если двигатели перегреты - отключаем их полностью
+
+        // Перегрев — глушим тягу
         if (isEngineOverheated)
         {
-            foreach (var engine in engines)
-            {
-                engine.UpdateEngineState(0f, Time.fixedDeltaTime);
-            }
+            foreach (var e in engines)
+                e.UpdateEngineState(0f, Runner.DeltaTime);
             return;
         }
-        
-        Vector3 targetDirection = Vector3.zero;
-        
-        // Определяем направление движения на основе нажатых клавиш
-        if (Input.GetKey(KeyCode.E)) // Вверх
+
+        // Собираем направление движения из ввода (локально у владельца state)
+        Vector3 dir = Vector3.zero;
+
+        if (Input.GetKey(KeyCode.E)) dir += Vector3.up;
+        if (Input.GetKey(KeyCode.C)) dir += Vector3.down;
+
+        if (Camera.main != null)
         {
-            targetDirection += Vector3.up;
-        }
-        if (Input.GetKey(KeyCode.C)) // Вниз
-        {
-            targetDirection += Vector3.down;
-        }
-        if (Input.GetKey(KeyCode.W)) // Вперед (относительно камеры)
-        {
-            if (Camera.main != null)
+            if (Input.GetKey(KeyCode.W))
             {
-                Vector3 cameraForward = Camera.main.transform.forward;
-                cameraForward.y = 0; // Проецируем на горизонтальную плоскость
-                cameraForward.Normalize();
-                targetDirection += cameraForward;
+                var f = Camera.main.transform.forward; f.y = 0f; dir += f.sqrMagnitude > 0 ? f.normalized : Vector3.zero;
+            }
+            if (Input.GetKey(KeyCode.S))
+            {
+                var b = -Camera.main.transform.forward; b.y = 0f; dir += b.sqrMagnitude > 0 ? b.normalized : Vector3.zero;
+            }
+            if (Input.GetKey(KeyCode.A))
+            {
+                var l = -Camera.main.transform.right; l.y = 0f; dir += l.sqrMagnitude > 0 ? l.normalized : Vector3.zero;
+            }
+            if (Input.GetKey(KeyCode.D))
+            {
+                var r = Camera.main.transform.right; r.y = 0f; dir += r.sqrMagnitude > 0 ? r.normalized : Vector3.zero;
             }
         }
-        if (Input.GetKey(KeyCode.S)) // Назад (относительно камеры)
+
+        if (dir == Vector3.zero)
         {
-            if (Camera.main != null)
-            {
-                Vector3 cameraBack = -Camera.main.transform.forward;
-                cameraBack.y = 0; // Проецируем на горизонтальную плоскость
-                cameraBack.Normalize();
-                targetDirection += cameraBack;
-            }
+            foreach (var e in engines)
+                e.UpdateEngineState(0f, Runner.DeltaTime);
+            return;
         }
-        if (Input.GetKey(KeyCode.A)) // Влево (относительно камеры)
-        {
-            if (Camera.main != null)
-            {
-                Vector3 cameraLeft = -Camera.main.transform.right;
-                cameraLeft.y = 0; // Проецируем на горизонтальную плоскость
-                cameraLeft.Normalize();
-                targetDirection += cameraLeft;
-            }
-        }
-        if (Input.GetKey(KeyCode.D)) // Вправо (относительно камеры)
-        {
-            if (Camera.main != null)
-            {
-                Vector3 cameraRight = Camera.main.transform.right;
-                cameraRight.y = 0; // Проецируем на горизонтальную плоскость
-                cameraRight.Normalize();
-                targetDirection += cameraRight;
-            }
-        }
-        
-        if (targetDirection != Vector3.zero)
-        {
-            targetDirection.Normalize();
-            ApplyEnginesForce(targetDirection);
-        }
-    }
-    
-    private void ApplyEnginesForce(Vector3 targetDirection)
-    {
-        bool isShiftPressed = Input.GetKey(KeyCode.LeftShift);
+        dir.Normalize();
+
+        // Boost из UI (Shift + емкость)
         float powerMultiplier = 1f;
-        
-        // Проверяем емкость двигателей при зажатом Shift
-        if (isShiftPressed && UI_Canvas.i.engine_burst != null)
+        bool shift = Input.GetKey(KeyCode.LeftShift);
+        if (shift && UI_Canvas.i.engine_burst != null)
         {
-            // Используем рефлексию для доступа к приватному полю engine_capacity
-            var engineCapacityField = typeof(ui_engine_burst).GetField("engine_capacity", 
+            var engineCapacityField = typeof(ui_engine_burst).GetField("engine_capacity",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
             if (engineCapacityField != null)
             {
                 var engineCapacity = engineCapacityField.GetValue(UI_Canvas.i.engine_burst) as UnityEngine.UI.Image;
                 if (engineCapacity != null && engineCapacity.fillAmount > 0)
-                {
-                    powerMultiplier = 2f; // Удваиваем мощность при наличии емкости
-                }
-                else
-                {
-                    powerMultiplier = 0f; // Отключаем двигатели если емкость кончилась
-                }
+                    powerMultiplier = 2f;
             }
         }
-        
+
+        // Применяем тягу по эффективности направления
         foreach (var engine in engines)
         {
             if (engine.engineSettings == null) continue;
-            
-            // Получаем мировое направление двигателя
-            Vector3 engineWorldDirection = engine.transform.TransformDirection(engine.engineSettings.force_vector_local);
-            
-            // Вычисляем угол между направлением двигателя и целевым направлением
-            float angle = Vector3.Angle(engineWorldDirection, targetDirection);
-            
-            // Если угол меньше 90 градусов, двигатель может помочь в движении
-            if (angle < 90f)
-            {
-                // Вычисляем эффективность двигателя (1.0 = полная эффективность, 0.0 = неэффективен)
-                float effectiveness = Mathf.Cos(angle * Mathf.Deg2Rad);
-                
-                // Применяем множитель мощности
-                effectiveness *= powerMultiplier;
-                
-                // Обновляем состояние двигателя на основе эффективности
-                engine.UpdateEngineState(effectiveness, Time.fixedDeltaTime);
-                
-                // Применяем силу через новый метод
-                engine.ApplyForce(machineRigidbody);
-                
-                // Debug.Log($"Engine {engine.name}: направление {engineWorldDirection}, эффективность {effectiveness:F2}, множитель {powerMultiplier}");
-            }
-            else
-            {
-                // Двигатель не эффективен в этом направлении - останавливаем его
-                engine.UpdateEngineState(0f, Time.fixedDeltaTime);
-            }
+
+            Vector3 engineWorldDir = engine.transform.TransformDirection(engine.engineSettings.force_vector_local);
+            float angle = Vector3.Angle(engineWorldDir, dir);
+            float eff = angle < 90f ? Mathf.Cos(angle * Mathf.Deg2Rad) * powerMultiplier : 0f;
+
+            // Апдейт состояния с сетевым дельта-таймом
+            eengine_UpdateAndApply(engine, eff, Runner.DeltaTime);
         }
     }
-    
-    // ========== СИСТЕМА УПРАВЛЕНИЯ ОРУЖИЕМ ==========
-    
+
+    // Вынесено, чтобы не забывать Runner.DeltaTime и порядок вызовов
+    private void eengine_UpdateAndApply(io_engine engine, float effectiveness, float dt)
+    {
+        engine.UpdateEngineState(effectiveness, dt);
+        engine.ApplyForce(machineRigidbody); // внутри должен быть AddForce/Acceleration, без собственного deltaTime
+    }
+
+    // ─────────────────────────── ЛОКАЛЬНЫЙ ВВОД ─────────────────────────────────
+    private void Update()
+    {
+        // Ввод/стрельба/перегрев считаем только у владельца ввода
+        if (!Object || !Object.HasInputAuthority) return;
+
+        UpdateEngineOverheatState();
+        HandleWeaponControl();
+    }
+
+    private void UpdateEngineOverheatState()
+    {
+        if (UI_Canvas.i.engine_burst == null) { isEngineOverheated = false; return; }
+
+        var disableTimerField = typeof(ui_engine_burst).GetField("DisableTimer",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var isOverheatedField = typeof(ui_engine_burst).GetField("isOverheated",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        if (disableTimerField != null && isOverheatedField != null)
+        {
+            float disableTimer = (float)disableTimerField.GetValue(UI_Canvas.i.engine_burst);
+            bool overheated = (bool)isOverheatedField.GetValue(UI_Canvas.i.engine_burst);
+            isEngineOverheated = disableTimer > 0f || overheated;
+        }
+    }
+
+    // ───────────────────────────── ОРУЖИЕ / ВВОД ────────────────────────────────
     private void HandleWeaponControl()
     {
         if (weapons.Count == 0) return;
-        
-        // Определяем направление стрельбы (вперед относительно камеры)
-        Vector3 fireDirection = Vector3.forward;
+
+        // Направление стрельбы — вперёд от камеры по горизонту (ориентация пули берётся по pivot Z в io_weapon)
+        Vector3 fireDir = Vector3.forward;
         if (Camera.main != null)
         {
-            fireDirection = Camera.main.transform.forward;
-            fireDirection.y = 0; // Проецируем на горизонтальную плоскость
-            fireDirection.Normalize();
+            fireDir = Camera.main.transform.forward;
+            fireDir.y = 0f;
+            fireDir = fireDir.sqrMagnitude > 0 ? fireDir.normalized : Vector3.forward;
         }
-        
-        // Левый клик мыши - стреляет оружием с weapon_index == 0
-        if (Input.GetMouseButtonDown(0))
-        {
-            Debug.Log($"PlayerController: Левый клик мыши! Стреляем оружием 0");
-            FireWeapon(0, fireDirection);
-        }
-        
-        // Цифры 1-5 - стреляют соответствующими оружиями
-        for (int i = 1; i <= 5; i++)
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha0 + i))
-            {
-                FireWeapon(i, fireDirection);
-            }
-        }
+
+        // ЛКМ — все орудия с индексом 0 (автоогонь)
+        if (Input.GetMouseButton(0))
+            FireWeaponsByIndex(0, fireDir);
+
+        // Цифры 1..5 — соответствующие группы (автоогонь)
+        if (Input.GetKey(KeyCode.Alpha1)) FireWeaponsByIndex(1, fireDir);
+        if (Input.GetKey(KeyCode.Alpha2)) FireWeaponsByIndex(2, fireDir);
+        if (Input.GetKey(KeyCode.Alpha3)) FireWeaponsByIndex(3, fireDir);
+        if (Input.GetKey(KeyCode.Alpha4)) FireWeaponsByIndex(4, fireDir);
+        if (Input.GetKey(KeyCode.Alpha5)) FireWeaponsByIndex(5, fireDir);
+        if (Input.GetKey(KeyCode.Alpha0)) FireWeaponsByIndex(0, fireDir); // опционально
     }
-    
-    private void FireWeapon(int weaponIndex, Vector3 direction)
+
+    private void FireWeaponsByIndex(int weaponIndex, Vector3 direction)
     {
-        Debug.Log($"PlayerController: FireWeapon вызван для индекса {weaponIndex}");
-        
-        // Ищем оружие с нужным индексом
-        foreach (var weapon in weapons)
+        for (int i = 0; i < weapons.Count; i++)
         {
-            if (weapon.weapon_SO != null && weapon.weapon_SO.weapon_index == weaponIndex)
-            {
-                Debug.Log($"PlayerController: Найдено оружие {weapon.name} с индексом {weaponIndex}");
-                
-                if (weapon.CanFire())
-                {
-                    weapon.Fire(Runner, direction);
-                    Debug.Log($"PlayerController: Выстрел из оружия {weapon.name} (индекс {weaponIndex})");
-                }
-                else
-                {
-                    Debug.Log($"PlayerController: Оружие {weapon.name} не может стрелять (патроны: {weapon.GetCurrentAmmo()}/{weapon.GetMaxAmmo()})");
-                }
-                break; // Стреляем только из первого найденного оружия с нужным индексом
-            }
+            var w = weapons[i];
+            if (w == null) continue;
+            var so = w.weapon_SO;
+            if (so == null || so.weapon_index != weaponIndex) continue;
+
+            if (w.CanFire())
+                w.Fire(Runner, direction);
         }
     }
 }
