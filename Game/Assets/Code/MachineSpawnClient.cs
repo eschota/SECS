@@ -125,22 +125,6 @@ public class MachineSpawnClient : NetworkBehaviour
         var bp    = BuildBlueprintFromCreator(creator);
         var bytes = BlueprintCodec.ToBytesOptimized(bp);
         
-        // Проверяем размер данных
-        if (bytes.Length > 500) // Оставляем небольшой запас от лимита 512
-        {
-            Debug.LogWarning($"[Spawn] Blueprint data size ({bytes.Length} bytes) is close to RPC limit (512 bytes). Consider reducing machine complexity.");
-            
-            // Если данные слишком большие, используем разбиение на части
-            if (bytes.Length > 512)
-            {
-                Debug.LogWarning($"[Spawn] Blueprint data size ({bytes.Length} bytes) exceeds RPC limit. Using chunked transmission.");
-                var chunks = BlueprintCodec.SplitBlueprintForRPC(bp);
-                // TODO: Реализовать передачу по частям
-                // Пока что просто предупреждаем
-                return;
-            }
-        }
-        
         float newRadius = EstimateHorizontalRadius(bp);
 
         // 2) Персональный якорь и поиск свободной точки
@@ -170,8 +154,34 @@ public class MachineSpawnClient : NetworkBehaviour
             return;
         }
 
-        machine.RPC_SetBlueprint(bytes);
-        Debug.Log($"{TAG} Spawned NO={spawned.Id} at {spawnPos}  cells={bp.cells.Count}  bytes={bytes.Length}");
+        // Проверяем размер данных и отправляем соответствующим способом
+        Debug.Log($"{TAG} Blueprint size check: {bytes.Length} bytes, safe limit: 480 bytes, condition: {bytes.Length > 480}");
+        if (bytes.Length > 480) // Учитываем накладные расходы Fusion (~32 байта)
+        {
+            Debug.LogWarning($"{TAG} Blueprint data size ({bytes.Length} bytes) exceeds RPC limit. Using chunked transmission.");
+            var chunks = BlueprintCodec.SplitBlueprintForRPC(bp);
+            
+            // Проверяем размер каждого чанка
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                if (chunks[i].Length > 512)
+                {
+                    Debug.LogError($"{TAG} Chunk {i} is still too large: {chunks[i].Length} bytes!");
+                }
+                else
+                {
+                    Debug.Log($"{TAG} Chunk {i} size: {chunks[i].Length} bytes");
+                }
+            }
+            
+            SendBlueprintChunked(machine, chunks);
+        }
+        else
+        {
+            Debug.Log($"{TAG} Using single RPC transmission for {bytes.Length} bytes (safe under 480 bytes limit)");
+            machine.RPC_SetBlueprint(bytes);
+            Debug.Log($"{TAG} Spawned NO={spawned.Id} at {spawnPos}  cells={bp.cells.Count}  bytes={bytes.Length}");
+        }
 
         // 4) Прячем СВОЙ конструктор
         SetConstructionHidden(true);
@@ -398,5 +408,24 @@ public void RequestDespawnOwnedMachine()
             foreach (var r in cell.GetComponentsInChildren<Renderer>(true)) r.enabled = !hidden;
             foreach (var c in cell.GetComponentsInChildren<Collider>(true)) c.enabled = !hidden;
         }
+    }
+
+    /// <summary>
+    /// Отправляет blueprint по частям через RPC
+    /// </summary>
+    private void SendBlueprintChunked(Machine machine, List<byte[]> chunks)
+    {
+        Debug.Log($"{TAG} Отправляем blueprint по частям: {chunks.Count} чанков");
+        
+        // Начинаем передачу
+        machine.RPC_StartBlueprintChunked(chunks.Count);
+        
+        // Отправляем каждый чанк
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            machine.RPC_ReceiveBlueprintChunk(i, chunks[i]);
+        }
+        
+        Debug.Log($"{TAG} Blueprint отправлен по частям успешно");
     }
 }

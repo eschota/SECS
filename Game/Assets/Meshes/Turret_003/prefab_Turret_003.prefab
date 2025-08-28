@@ -591,6 +591,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 67f16b8a5d9e40f4f9b4a8cd25fb5f65, type: 2}
   - {fileID: 11400000, guid: e0d705ca3db931c45a9cd9f402a53755, type: 2}
   prefab_name: 
-  targetRigidbody: {fileID: 0}
+  targetRigidbody: {fileID: 7027113921596473392}
   statusTransitionTimer: 0
   _status: 0

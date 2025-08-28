@@ -8,7 +8,6 @@ using System.Linq;
 using UnityEditor;
 #endif
 
-
 public class Creator : MonoBehaviour
 {
     public static Creator instance;
@@ -20,15 +19,17 @@ public class Creator : MonoBehaviour
         Rotate,
     }
     public static event Action<ActionType, io_base> AllActions;
+
     void Start()
     {
 
     }
+
     void Awake()
     {
         Debug.Log("=== Creator Awake started ===");
         instance = this;
-        
+
         // В билде префабы должны быть уже сериализованы в сцене
         // В редакторе они загружаются в OnValidate
 #if !UNITY_EDITOR
@@ -41,7 +42,7 @@ public class Creator : MonoBehaviour
         else
         {
             Debug.Log($"Prefabs serialized in build: {prefabs.Count} prefabs");
-            
+
             // Восстанавливаем prefabLookup из сериализованных префабов
             prefabLookup.Clear();
             foreach (var prefab in prefabs)
@@ -57,16 +58,16 @@ public class Creator : MonoBehaviour
         // В редакторе префабы загружаются в OnValidate
         Debug.Log($"Editor mode: {prefabs.Count} prefabs, {prefabLookup.Count} in lookup");
 #endif
-        
+
         PlacePrefabs();
         CreateCameraWitPivot();
         LoadUI();
         Debug.Log("=== Creator Awake completed ===");
     }
+
     void Update()
     {
         if (Play.i.currentState != Play.State.Create) return;
-
 
         // Проверяем состояние Play - если в режиме симуляции, не выполняем создание
         if (_play != null && _play.currentState == Play.State.Create)
@@ -75,6 +76,7 @@ public class Creator : MonoBehaviour
             DeleteCell();
         }
     }
+
     [SerializeField] public List<io_base> prefabs = new List<io_base>();
     [SerializeField] public Dictionary<string, io_base> prefabLookup = new Dictionary<string, io_base>(); // Словарь для поиска префабов по имени
     [SerializeField] public cam _cam;
@@ -86,8 +88,27 @@ public class Creator : MonoBehaviour
     [SerializeField] private List<Material> _materials = new List<Material>();
     public bool SnapGrid = true;
     private io_base _current_prefab;
-    public io_base current_prefab_to_chabge; 
+    public io_base current_prefab_to_chabge;
     private int lastYawSteps = 0; // Запоминаем последний Yaw у созданной клетки 
+
+    // === УТИЛИТЫ ДЛЯ ПЕРЕИМЕНОВАНИЯ ===
+    private static Vector3Int RoundToInt(Vector3 p) =>
+        new Vector3Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y), Mathf.RoundToInt(p.z));
+
+    private void RenameIoBase(io_base cell)
+    {
+        if (cell == null) return;
+
+        // Берём фактическое мировое положение объекта
+        Vector3Int p = RoundToInt(cell.transform.position);
+
+        // Источник имени — prefab_name, иначе текущее имя
+        string baseName = string.IsNullOrEmpty(cell.prefab_name) ? cell.name : cell.prefab_name;
+
+        cell.gameObject.name = $"{baseName}_{p.x}_{p.y}_{p.z}";
+    }
+    // ===================================
+
     public io_base current_prefab
     {
         get
@@ -107,30 +128,30 @@ public class Creator : MonoBehaviour
                         return null;
                     }
                 }
-                
+
                 var a = Instantiate(current_prefab_to_chabge, transform);
                 _current_prefab = a;
                 _current_prefab.transform.position = _cam.target_pivot_position;
                 _current_prefab.target_world_position = _cam.target_pivot_position;
                 _current_prefab.yawSteps = lastYawSteps; // Применяем последний Yaw
                 _current_prefab.target_world_rotation = Quaternion.identity;
-                _current_prefab.transform.localScale=Vector3.one*0.01f;
+                _current_prefab.transform.localScale = Vector3.one * 0.01f;
                 _current_prefab.name = "Current Create";
                 // Убеждаемся, что текущий префаб остается в иерархии Creator
                 _current_prefab.transform.SetParent(transform);
                 _current_prefab.Status = io_base.io_base_status.Creating;
                 cells.Add(_current_prefab);
-                
+
                 // Логируем созданную клетку с её типом
                 string cellType = _current_prefab.GetCellType();
-//                Debug.Log($"Created current_prefab: {_current_prefab.name} of type: {cellType}");
+                // Debug.Log($"Created current_prefab: {_current_prefab.name} of type: {cellType}");
             }
             return _current_prefab;
         }
         set
         {
             if (value != null)
-            { 
+            {
                 _current_prefab = null;
             }
             else
@@ -141,8 +162,7 @@ public class Creator : MonoBehaviour
         }
     }
 
-
-   // private io_base last_prefab_over;
+    // private io_base last_prefab_over;
     void CreateCell()
     {
         LayerMask layer_mask = LayerMask.GetMask("io_base");
@@ -155,13 +175,12 @@ public class Creator : MonoBehaviour
                 return;
             }
 
-
             // Создание клетки при нажатии
             if (current_prefab != null && current_prefab.Status != io_base.io_base_status.Intersected)
             {
                 // Сохраняем состояние для Undo перед созданием клетки
                 SaveStateForUndo();
-                
+
                 AllActions?.Invoke(ActionType.Create, current_prefab);
 
                 // Убеждаемся, что клетка остается в иерархии Creator, а не попадает в пивот
@@ -169,11 +188,19 @@ public class Creator : MonoBehaviour
 
                 // Смещаем пивот к точке создания клетки
                 _cam.target_pivot_position = current_prefab.transform.position;
-                
+
                 // Сохраняем текущий Yaw для следующей клетки
                 lastYawSteps = current_prefab.yawSteps;
 
+                // На всякий случай применим целевые позицию/поворот на сам Transform
+                current_prefab.transform.position = current_prefab.target_world_position;
+                current_prefab.transform.rotation = current_prefab.target_world_rotation;
+
+                // Переводим в финальный статус и ПЕРЕИМЕНОВЫВАЕМ
                 current_prefab.Status = io_base.io_base_status.Placing;
+                RenameIoBase(current_prefab);
+
+                // Сбрасываем превью
                 current_prefab = null;
             }
         }
@@ -181,7 +208,7 @@ public class Creator : MonoBehaviour
         // Обработка отпускания кнопки мыши
         if (Input.GetMouseButtonUp(0))
         {
-//            Debug.Log("Mouse button up detected!");
+            // Debug.Log("Mouse button up detected!");
         }
 
         if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1000, layer_mask))
@@ -190,18 +217,12 @@ public class Creator : MonoBehaviour
             {
                 var cell_to_check = hit.collider.GetComponent<io_cell>();
 
-                // if (cell_to_check.target_io_base != last_prefab_over)
-                // { 
-                //     last_prefab_over = cell_to_check.target_io_base;
-                //     last_prefab_over.statusTransitionTimer = 0;
-                // }
                 if (!cell_to_check.possible_to_place)
                 {
                     if (current_prefab != null)
                         current_prefab.Status = io_base.io_base_status.Hidden;
                     return;
                 }
-
 
                 // Определяем направление касания (normal)
                 Vector3 hitNormal = hit.normal;
@@ -239,7 +260,8 @@ public class Creator : MonoBehaviour
                     }
 
                     current_prefab.target_world_position = targetPosition;
-                    // check direction of hitNormal and rotate current_prefab to this direction
+
+                    // 1) выравнивание "вверх" по нормали
                     Vector3 up = hitNormal.normalized;
                     Quaternion alignUp = Quaternion.FromToRotation(Vector3.up, up);
 
@@ -248,14 +270,16 @@ public class Creator : MonoBehaviour
 
                     // 3) финальный поворот
                     Quaternion finalRot = alignUp * yawRot;
-                    
+
                     // Округляем углы до кратных 90°
                     Vector3 eulerAngles = finalRot.eulerAngles;
                     float roundedX = Mathf.Round(eulerAngles.x / 90f) * 90f;
                     float roundedY = Mathf.Round(eulerAngles.y / 90f) * 90f;
                     float roundedZ = Mathf.Round(eulerAngles.z / 90f) * 90f;
-                    
-                    current_prefab.target_world_rotation = Quaternion.Euler(roundedX, roundedY, roundedZ);   // check intersections 
+
+                    current_prefab.target_world_rotation = Quaternion.Euler(roundedX, roundedY, roundedZ);
+
+                    // check intersections 
                     foreach (var cell in current_prefab.target_cells)
                     {
                         // Применяем поворот к локальной позиции клетки
@@ -264,26 +288,29 @@ public class Creator : MonoBehaviour
 
                         foreach (var b in cells)
                         {
-                            if (b != current_prefab)
+                            if (b != current_prefab && b != null)
                                 foreach (var cell2 in b.target_cells)
                                 {
                                     Vector3 rotatedLocalPosition2 = b.target_world_rotation * cell2.target_local_position;
                                     Vector3 worldCellPosition2 = b.target_world_position + rotatedLocalPosition2;
                                     if ((worldCellPosition - worldCellPosition2).sqrMagnitude < 0.1f)
                                     {
+                                        if (Input.GetKeyDown(KeyCode.L))
+                                        {
+                                            Debug.Log(cell2.target_io_base.name);
+                                            Debug.Log(cell2.name);
+                                        }
                                         current_prefab.Status = io_base.io_base_status.Intersected;
                                         if (Input.GetKeyDown(KeyCode.R)) current_prefab.Rotate();
 
                                         return;
                                     }
                                 }
-
                         }
                     }
                     current_prefab.Status = io_base.io_base_status.Creating;
                     if (Input.GetKeyDown(KeyCode.R)) current_prefab.Rotate();
                 }
-
             }
             else
             {
@@ -295,41 +322,41 @@ public class Creator : MonoBehaviour
             if (current_prefab != null && current_prefab.Status != io_base.io_base_status.Intersected)
                 current_prefab.Status = io_base.io_base_status.Hidden;
             // Если луч не попал никуда, можно скрыть объект или разместить в дефолтной позиции
-
         }
     }
+
     void DeleteCell()
     {
         if (Input.GetKeyDown(KeyCode.X))
         {
-            if(Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1000, LayerMask.GetMask("io_base")))
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1000, LayerMask.GetMask("io_base")))
             {
                 var targetCell = hit.collider.gameObject.GetComponent<io_cell>().target_io_base;
-                if(targetCell.Status == io_base.io_base_status.Placing)
+                // Разрешаем удаление любой клетки, кроме превью (Creating),
+                // чтобы можно было удалить "невидимого блокера", если такой возник.
+                if (targetCell != null && targetCell.Status != io_base.io_base_status.Creating)
                 {
                     SaveStateForUndo();
-                    
-                    // Уничтожаем GameObject (клетка автоматически удалится из списка в OnDestroy)
                     Destroy(targetCell.gameObject);
-                    
                     Debug.Log($"Deleted cell: {targetCell.name}");
                 }
             }
-            
         }
     }
+
     public List<item_SO> items_list = new List<item_SO>();
+
     public void LoadPrefabs()
     {
         Debug.Log("=== LoadPrefabs started ===");
-        
+
         // Очищаем старые данные
         prefabs.Clear();
         prefabLookup.Clear();
-        
+
         // Загружаем все item_SO из папки Items_serialized включая подпапки
-        items_list = Resources.LoadAll<item_SO>("Items_serialized").ToList(); 
-        
+        items_list = Resources.LoadAll<item_SO>("Items_serialized").ToList();
+
         // Извлекаем prefab из каждого item_SO и добавляем в список
         foreach (var item in items_list)
         {
@@ -338,14 +365,13 @@ public class Creator : MonoBehaviour
             {
                 string prefabName = item.prefab.name;
                 item.prefab.prefab_name = prefabName;
-                
+
                 // Проверяем тип префаба и логируем
                 string cellType = item.prefab.GetCellType();
-               // Debug.Log($"  - Prefab type: {cellType}, name: {prefabName}");
-                
+                // Debug.Log($"  - Prefab type: {cellType}, name: {prefabName}");
+
                 prefabs.Add(item.prefab);
                 // Добавляем в словарь для быстрого поиска по имени
-            
                 if (!prefabLookup.ContainsKey(prefabName))
                 {
                     prefabLookup[prefabName] = item.prefab;
@@ -360,15 +386,15 @@ public class Creator : MonoBehaviour
                 Debug.LogWarning($"  - Prefab is null for item: {item.name}");
             }
         }
-        
+
         // Устанавливаем первый префаб как текущий
         if (prefabs.Count > 0)
         {
-        current_prefab_to_chabge = prefabs[0];
+            current_prefab_to_chabge = prefabs[0];
         }
-        
+
         Debug.Log($"LoadPrefabs completed. Loaded {prefabs.Count} prefabs, lookup contains {prefabLookup.Count} entries");
-        
+
         // Проверяем что все префабы имеют правильные имена
         foreach (var prefab in prefabs)
         {
@@ -379,14 +405,15 @@ public class Creator : MonoBehaviour
             }
         }
     }
+
     void CreateCameraWitPivot()
     {
-
         _cam = gameObject.AddComponent<cam>();
         _play = gameObject.AddComponent<Play>();
     }
+
     public Vector3 current_prefab_position = Vector3.zero;
-     
+
     void PlacePrefabs()
     {
         foreach (var prefab in prefabs)
@@ -394,11 +421,14 @@ public class Creator : MonoBehaviour
             var new_prefab = Instantiate(prefab, transform);
             cells.Add(new_prefab);
             new_prefab.Status = io_base.io_base_status.Placing;
-            
+
+            // Переименуем начально созданный элемент по позиции (0,0,0), если нужно
+            RenameIoBase(new_prefab);
+
             // Логируем созданную клетку с её типом
             string cellType = new_prefab.GetCellType();
-//            Debug.Log($"Placed cell: {new_prefab.name} of type: {cellType}");
-            
+            // Debug.Log($"Placed cell: {new_prefab.name} of type: {cellType}");
+
             return;
         }
     }
@@ -406,10 +436,10 @@ public class Creator : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
-        if(Application.isPlaying) return;
-        // Загружаем префабы из новой системы и сериализуем их в сцену
+        if (Application.isPlaying) return;
+        // Загружаем префабы из новой системы и сериализуем их в сцене
         LoadPrefabs();
-        
+
         // Также заполняем старый список для совместимости
         _prefabs.Clear();
         foreach (var prefab in prefabs)
@@ -419,11 +449,11 @@ public class Creator : MonoBehaviour
                 _prefabs.Add(prefab);
             }
         }
-        
+
         // Автоматически сохраняем сцену чтобы префабы сериализовались
         EditorUtility.SetDirty(this);
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
-        
+
         _shaders.Clear();
         var shaders_in_folder = Resources.LoadAll<Shader>("Shaders");
         if (_shaders.Count != shaders_in_folder.Length)
@@ -437,8 +467,6 @@ public class Creator : MonoBehaviour
             }
         }
 
-         
-
         _statuses.Clear();
         var statuses_in_folder = Resources.LoadAll<io_base_SO>("Statuses");
         if (_statuses.Count != statuses_in_folder.Length)
@@ -451,7 +479,7 @@ public class Creator : MonoBehaviour
                 }
             }
         }
-        
+
         _materials.Clear();
         var materials_in_folder = Resources.LoadAll<Material>("mats");
         if (_materials.Count != materials_in_folder.Length)
@@ -486,7 +514,7 @@ public class Creator : MonoBehaviour
         {
             Destroy(UI_Canvas.i.ui_camera.gameObject);
         }
-        UI_Canvas.UI_ChangeState += OnSubTypeSelected; 
+        UI_Canvas.UI_ChangeState += OnSubTypeSelected;
     }
 
     private void OnSubTypeSelected(UI_Button button)
@@ -501,36 +529,42 @@ public class Creator : MonoBehaviour
         {
             SaveMachine();
             return;
-        } if (button.gameObject.name == "ButtonLoad")
+        }
+        if (button.gameObject.name == "ButtonLoad")
         {
             LoadMachine();
             return;
-        } if (button.gameObject.name == "ButtonUnDo")
+        }
+        if (button.gameObject.name == "ButtonUnDo")
         {
             UndoMachine();
             return;
-        } if (button.gameObject.name == "ButtonReDo")
+        }
+        if (button.gameObject.name == "ButtonReDo")
         {
             RedoMachine();
             return;
-        } if (button.gameObject.name == "ButtonPlay")
+        }
+        if (button.gameObject.name == "ButtonPlay")
         {
             PlayMachine();
             return;
         }
-//        Debug.Log("OnSubTypeSelected: " + button.name);
+        // Debug.Log("OnSubTypeSelected: " + button.name);
         current_prefab_to_chabge = button.Item.prefab;
         if (current_prefab != null)
         {
             current_prefab_position = current_prefab.transform.position;
-            Destroy(current_prefab.gameObject);  
+            Destroy(current_prefab.gameObject);
         }
         current_prefab = null;
     }
+
     void OnDestroy()
     {
         UI_Canvas.UI_ChangeState -= OnSubTypeSelected;
     }
+
     private void ClearMachine()
     {
         // Сохраняем состояние для Undo перед очисткой
@@ -538,33 +572,33 @@ public class Creator : MonoBehaviour
         {
             SaveStateForUndo();
         }
-        
+
         ClearMachineInternal();
     }
 
     private void ClearMachineInternal()
     {
         Debug.Log($"ClearMachineInternal: clearing {cells.Count} cells");
-        
+
         foreach (var cell in cells)
         {
             if (cell != null)
-        {
-            Destroy(cell.gameObject);
+            {
+                Destroy(cell.gameObject);
             }
         }
         cells.Clear();
         current_prefab = null;
-        
+
         // НЕ обнуляем current_prefab_to_chabge, чтобы можно было создавать новые префабы
         if (current_prefab_to_chabge == null && prefabs.Count > 0)
         {
             current_prefab_to_chabge = prefabs[0];
         }
-        
+
         _cam.target_pivot_position = Vector3.zero;
         _cam.target_pivot_rotation = Quaternion.identity;
-        
+
         Debug.Log("ClearMachineInternal: machine cleared successfully");
     }
 
@@ -578,8 +612,6 @@ public class Creator : MonoBehaviour
         public string machine_name;
     }
 
-
-
     // Undo/Redo система
     private List<MachineData> undoStack = new List<MachineData>();
     private List<MachineData> redoStack = new List<MachineData>();
@@ -588,61 +620,61 @@ public class Creator : MonoBehaviour
     private void SaveMachine()
     {
         Debug.Log("=== SaveMachine started ===");
-        
+
         // Создаем автосейв с ротацией
         int currentCounter = PlayerPrefs.GetInt("auto_save_counter", 0);
         currentCounter = (currentCounter % 5) + 1; // Ротация от 1 до 5
-        
+
         string saveKey = "auto_save_" + currentCounter;
         Debug.Log($"Saving to key: {saveKey}");
-        
+
         MachineData machineData = CreateMachineData(saveKey);
         Debug.Log($"MachineData created with {machineData?.cells?.Count ?? 0} cells");
-        
+
         string json = JsonUtility.ToJson(machineData, true);
         Debug.Log($"JSON created, length: {json?.Length ?? 0}");
-        
+
         PlayerPrefs.SetString(saveKey, json);
         PlayerPrefs.SetInt("auto_save_counter", currentCounter);
         PlayerPrefs.Save();
-        
+
         Debug.Log($"Machine saved to {saveKey}");
     }
 
     private void LoadMachine()
     {
         Debug.Log("=== LoadMachine started ===");
-        
+
         // Ищем последний автосейв
         int lastCounter = PlayerPrefs.GetInt("auto_save_counter", 0);
         Debug.Log($"Last counter: {lastCounter}");
-        
+
         if (lastCounter == 0)
         {
             Debug.Log("No auto saves found");
             return;
         }
-        
+
         string loadKey = "auto_save_" + lastCounter;
         Debug.Log($"Loading from key: {loadKey}");
-        
+
         string json = PlayerPrefs.GetString(loadKey, "");
         Debug.Log($"JSON length: {json?.Length ?? 0}");
-        
+
         if (string.IsNullOrEmpty(json))
         {
             Debug.Log("No save data found");
             return;
         }
-        
+
         try
         {
             // Сохраняем текущее состояние для Undo перед загрузкой
             SaveStateForUndo();
-            
+
             MachineData machineData = JsonUtility.FromJson<MachineData>(json);
             Debug.Log($"MachineData parsed successfully. Cells count: {machineData?.cells?.Count ?? 0}");
-            
+
             LoadMachineData(machineData);
             Debug.Log($"Machine loaded from {loadKey}");
         }
@@ -656,7 +688,7 @@ public class Creator : MonoBehaviour
     private void UndoMachine()
     {
         Debug.Log("=== UndoMachine started ===");
-        
+
         if (undoStack.Count == 0)
         {
             Debug.Log("Nothing to undo");
@@ -666,7 +698,7 @@ public class Creator : MonoBehaviour
         // Сохраняем текущее состояние в redo стек
         MachineData currentState = CreateMachineData("undo");
         redoStack.Add(currentState);
-        
+
         // Ограничиваем размер redo стека
         if (redoStack.Count > maxUndoSteps)
         {
@@ -676,7 +708,7 @@ public class Creator : MonoBehaviour
         // Загружаем предыдущее состояние
         MachineData previousState = undoStack[undoStack.Count - 1];
         undoStack.RemoveAt(undoStack.Count - 1);
-        
+
         LoadMachineDataForUndoRedo(previousState);
         Debug.Log("Undo performed");
     }
@@ -684,7 +716,7 @@ public class Creator : MonoBehaviour
     private void RedoMachine()
     {
         Debug.Log("=== RedoMachine started ===");
-        
+
         if (redoStack.Count == 0)
         {
             Debug.Log("Nothing to redo");
@@ -694,7 +726,7 @@ public class Creator : MonoBehaviour
         // Сохраняем текущее состояние в undo стек
         MachineData currentState = CreateMachineData("redo");
         undoStack.Add(currentState);
-        
+
         // Ограничиваем размер undo стека
         if (undoStack.Count > maxUndoSteps)
         {
@@ -704,7 +736,7 @@ public class Creator : MonoBehaviour
         // Загружаем следующее состояние
         MachineData nextState = redoStack[redoStack.Count - 1];
         redoStack.RemoveAt(redoStack.Count - 1);
-        
+
         LoadMachineDataForUndoRedo(nextState);
         Debug.Log("Redo performed");
     }
@@ -724,23 +756,21 @@ public class Creator : MonoBehaviour
 
     private MachineData CreateMachineData(string Machine_name)
     {
-       // Debug.Log($"Total cells in scene: {cells.Count}");
-        
+        // Debug.Log($"Total cells in scene: {cells.Count}");
+
         MachineData data = new MachineData();
-        
+
         // Сохраняем позицию и поворот камеры
         if (_cam != null)
         {
             data.cameraPivotPosition = _cam.target_pivot_position;
             data.cameraPivotRotation = _cam.target_pivot_rotation;
-            
+
         }
         data.machine_name = Machine_name;
         // Сохраняем все клетки кроме текущей создаваемой
         foreach (var cell in cells)
         {
-            
-            
             if (cell != null && cell.Status != io_base.io_base_status.Creating && cell.Status != io_base.io_base_status.Intersected)
             {
                 // Используем полиморфную сериализацию
@@ -749,19 +779,19 @@ public class Creator : MonoBehaviour
             }
             else
             {
-//                Debug.Log($"Skipping cell: {cell?.name} (null: {cell == null}, creating: {cell?.Status == io_base.io_base_status.Creating})");
+                // Debug.Log($"Skipping cell: {cell?.name} (null: {cell == null}, creating: {cell?.Status == io_base.io_base_status.Creating})");
             }
         }
-        
+
         Debug.Log($"CreateMachineData completed. Saved {data.cells.Count} cells");
         return data;
     }
-    
+
     private global::io_base_serialized CreateSerializedData(io_base cell)
     {
         // Создаем правильный тип данных на основе типа клетки
         global::io_base_serialized cellData;
-        
+
         switch (cell.GetCellType())
         {
             case "io_engine":
@@ -771,62 +801,67 @@ public class Creator : MonoBehaviour
                 cellData = new global::io_base_serialized();
                 break;
         }
-        
+
         // Используем полиморфную сериализацию
         cell.SerializeToData(cellData);
         return cellData;
     }
- 
 
     private void LoadMachineData(MachineData data)
     {
         Debug.Log("=== LoadMachineData started ===");
         Debug.Log($"Available prefabs count: {prefabs.Count}");
         Debug.Log($"PrefabLookup count: {prefabLookup.Count}");
-        
+
         // Выводим все доступные префабы
         Debug.Log("Available prefab names:");
         foreach (var kvp in prefabLookup)
         {
             Debug.Log($"  - {kvp.Key}");
         }
-        
+
         // Очищаем текущую машину без сохранения состояния для Undo
         ClearMachineInternal();
-        
+
         // Восстанавливаем позицию камеры
         if (_cam != null)
         {
             _cam.target_pivot_position = data.cameraPivotPosition;
             _cam.target_pivot_rotation = data.cameraPivotRotation;
         }
-        
+
         Debug.Log($"Cells to load: {data.cells?.Count ?? 0}");
-        
+
         // Восстанавливаем клетки
         foreach (var cellData in data.cells)
         {
             Debug.Log($"Processing cell: {cellData.name}, prefabName: '{cellData._prefab_name}', cellType: '{cellData._cell_type}'");
-            
+
             io_base prefab = null;
-            
+
             // Ищем префаб по имени
             if (!string.IsNullOrEmpty(cellData._prefab_name) && prefabLookup.TryGetValue(cellData._prefab_name, out prefab))
             {
                 Debug.Log($"Found prefab: {cellData._prefab_name}");
                 var newCell = Instantiate(prefab, transform);
-                
+
                 // Используем полиморфную десериализацию
                 newCell.DeserializeFromData(cellData);
-                
+
                 // Устанавливаем позицию и поворот
                 newCell.transform.position = cellData._target_world_position;
                 newCell.transform.rotation = cellData._target_world_rotation;
-                
+
+                // Жизненно важно: после загрузки делаем клетку видимой/валидной
+                newCell.Status = io_base.io_base_status.Placing;
+
+                // Переименовываем по позиции
+                RenameIoBase(newCell);
+
                 cells.Add(newCell);
                 string cellType = newCell.GetCellType();
                 Debug.Log($"Successfully created cell: {newCell.name} of type {cellType}");
-                
+
                 // Дополнительная информация для двигателей
                 if (cellType == "io_engine")
                 {
@@ -847,7 +882,7 @@ public class Creator : MonoBehaviour
                 Debug.LogWarning($"PrefabLookup contains keys: {string.Join(", ", prefabLookup.Keys)}");
             }
         }
-        
+
         Debug.Log($"LoadMachineData completed. Total cells loaded: {cells.Count}");
     }
 
@@ -855,60 +890,70 @@ public class Creator : MonoBehaviour
     private void LoadMachineDataForUndoRedo(MachineData data)
     {
         Debug.Log("=== LoadMachineDataForUndoRedo started ===");
-        
+
         // Принудительно очищаем все клетки
         Debug.Log($"Force clearing {cells.Count} cells for Undo/Redo");
-        
+
         // Создаем копию списка чтобы избежать проблем с итерацией
         var cellsToDestroy = new List<io_base>(cells);
         cells.Clear(); // Очищаем список сразу
-        
+
         // Уничтожаем все клетки
         foreach (var cell in cellsToDestroy)
         {
             if (cell != null && cell.gameObject != null)
             {
                 Debug.Log($"Destroying cell: {cell.name}");
-                DestroyImmediate(cell.gameObject); // Используем DestroyImmediate для немедленного уничтожения
+#if UNITY_EDITOR
+                DestroyImmediate(cell.gameObject);
+#else
+                Destroy(cell.gameObject);
+#endif
             }
         }
-        
+
         // Очищаем текущий префаб
         current_prefab = null;
-        
+
         // Восстанавливаем позицию камеры
         if (_cam != null)
         {
             _cam.target_pivot_position = data.cameraPivotPosition;
             _cam.target_pivot_rotation = data.cameraPivotRotation;
         }
-        
+
         Debug.Log($"Cells to load: {data.cells?.Count ?? 0}");
-        
+
         // Восстанавливаем клетки
         foreach (var cellData in data.cells)
         {
             Debug.Log($"Processing cell: {cellData.name}, prefabName: '{cellData._prefab_name}', cellType: '{cellData._cell_type}'");
-            
+
             io_base prefab = null;
-            
+
             // Ищем префаб по имени
             if (!string.IsNullOrEmpty(cellData._prefab_name) && prefabLookup.TryGetValue(cellData._prefab_name, out prefab))
             {
                 Debug.Log($"Found prefab: {cellData._prefab_name}");
                 var newCell = Instantiate(prefab, transform);
-                
+
                 // Используем полиморфную десериализацию
                 newCell.DeserializeFromData(cellData);
-                
+
                 // Устанавливаем позицию и поворот
                 newCell.transform.position = cellData._target_world_position;
                 newCell.transform.rotation = cellData._target_world_rotation;
-                
+
+                // Жизненно важно: после загрузки делаем клетку видимой/валидной
+                newCell.Status = io_base.io_base_status.Placing;
+
+                // Переименовываем по позиции
+                RenameIoBase(newCell);
+
                 cells.Add(newCell);
                 string cellType = newCell.GetCellType();
                 Debug.Log($"Successfully created cell: {newCell.name} of type {cellType}");
-                
+
                 // Дополнительная информация для двигателей
                 if (cellType == "io_engine")
                 {
@@ -929,26 +974,23 @@ public class Creator : MonoBehaviour
                 Debug.LogWarning($"PrefabLookup contains keys: {string.Join(", ", prefabLookup.Keys)}");
             }
         }
-        
+
         Debug.Log($"LoadMachineDataForUndoRedo completed. Total cells loaded: {cells.Count}");
     }
-
-
 
     // Сохраняем состояние для Undo при важных действиях
     private void SaveStateForUndo()
     {
         MachineData currentState = CreateMachineData("undo");
         undoStack.Add(currentState);
-        
+
         // Ограничиваем размер undo стека
         if (undoStack.Count > maxUndoSteps)
         {
             undoStack.RemoveAt(0);
         }
-        
+
         // Очищаем redo стек при новом действии
         redoStack.Clear();
     }
-  
 }

@@ -29,6 +29,11 @@ public class Machine : NetworkBehaviour
     private int _machineLayer = -1;
     private Dictionary<string, io_base> prefabLookup = new Dictionary<string, io_base>();
     private byte[] savedBlueprintData; // Сохраняем blueprint для отправки новым игрокам
+    
+    // Переменные для передачи blueprint по частям
+    private List<byte[]> receivedChunks = new List<byte[]>();
+    private int expectedChunks = 0;
+    private int receivedChunksCount = 0;
 
     public override void Spawned()
     {
@@ -83,6 +88,97 @@ public class Machine : NetworkBehaviour
     }
 
     /// <summary>
+    /// Начинаем передачу blueprint по частям
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    public void RPC_StartBlueprintChunked(int totalChunks)
+    {
+        Debug.Log($"{TAG} Начинаем получение blueprint по частям: {totalChunks} чанков");
+        
+        // Сбрасываем состояние
+        receivedChunks.Clear();
+        expectedChunks = totalChunks;
+        receivedChunksCount = 0;
+        
+        // Подготавливаем список для чанков
+        for (int i = 0; i < totalChunks; i++)
+        {
+            receivedChunks.Add(null);
+        }
+    }
+
+    /// <summary>
+    /// Получаем один чанк blueprint
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    public void RPC_ReceiveBlueprintChunk(int chunkIndex, byte[] chunkData)
+    {
+        Debug.Log($"{TAG} Получен чанк {chunkIndex + 1}/{expectedChunks}");
+        
+        if (chunkIndex >= 0 && chunkIndex < receivedChunks.Count)
+        {
+            receivedChunks[chunkIndex] = chunkData;
+            receivedChunksCount++;
+            
+            // Проверяем, получили ли все чанки
+            if (receivedChunksCount >= expectedChunks)
+            {
+                AssembleBlueprintFromChunks();
+            }
+        }
+        else
+        {
+            Debug.LogError($"{TAG} Неверный индекс чанка: {chunkIndex}");
+        }
+    }
+
+    /// <summary>
+    /// Собираем blueprint из полученных чанков
+    /// </summary>
+    private void AssembleBlueprintFromChunks()
+    {
+        Debug.Log($"{TAG} Собираем blueprint из {receivedChunksCount} чанков");
+        
+        try
+        {
+            // Объединяем все чанки
+            var combinedData = new List<byte>();
+            foreach (var chunk in receivedChunks)
+            {
+                if (chunk != null)
+                {
+                    combinedData.AddRange(chunk);
+                }
+            }
+            
+            var assembledData = combinedData.ToArray();
+            Debug.Log($"{TAG} Собран blueprint размером {assembledData.Length} байт");
+            
+            // Обрабатываем собранный blueprint
+            var bp = BlueprintCodec.FromBytes(assembledData);
+            Debug.Log($"{TAG} Получен blueprint ({bp.cells.Count} клеток) → сборка...");
+
+            BuildFromBlueprint(bp);
+            RecalculateBounds();
+
+            // запас: берём 2 * наибольший half-extent
+            safeRadius = Mathf.Max(2f * BoundsMaxExtent, 1.0f);
+
+            if (Object.HasInputAuthority)
+                OnLocalMachineReady?.Invoke(this);
+
+            Debug.Log($"{TAG} Сборка завершена. Extent={BoundsMaxExtent:F2}, safeRadius={safeRadius:F2}");
+
+            // Сохраняем blueprint данные для отправки новым игрокам
+            savedBlueprintData = assembledData;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{TAG} Ошибка при сборке blueprint из чанков: {e.Message}");
+        }
+    }
+
+    /// <summary>
     /// Отправляем информацию о существующей машине новому игроку
     /// </summary>
     [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
@@ -93,7 +189,20 @@ public class Machine : NetworkBehaviour
             if (savedBlueprintData != null)
             {
                 Debug.Log($"{TAG} Отправляем существующую машину новому игроку {newPlayer}");
-                RPC_SetBlueprint(savedBlueprintData);
+                
+                // Проверяем размер данных и отправляем соответствующим способом
+                Debug.Log($"{TAG} Sending to new player: blueprint size {savedBlueprintData.Length} bytes");
+                if (savedBlueprintData.Length > 512)
+                {
+                    Debug.LogWarning($"{TAG} Blueprint data size ({savedBlueprintData.Length} bytes) exceeds RPC limit. Using chunked transmission for new player.");
+                    var bp = BlueprintCodec.FromBytes(savedBlueprintData);
+                    var chunks = BlueprintCodec.SplitBlueprintForRPC(bp);
+                    SendBlueprintChunkedToNewPlayer(newPlayer, chunks);
+                }
+                else
+                {
+                    RPC_SetBlueprint(savedBlueprintData);
+                }
             }
             else
             {
@@ -215,4 +324,23 @@ public class Machine : NetworkBehaviour
         }
     }
 #endif
+
+    /// <summary>
+    /// Отправляет blueprint по частям новому игроку
+    /// </summary>
+    private void SendBlueprintChunkedToNewPlayer(PlayerRef newPlayer, List<byte[]> chunks)
+    {
+        Debug.Log($"{TAG} Отправляем blueprint по частям новому игроку {newPlayer}: {chunks.Count} чанков");
+        
+        // Начинаем передачу
+        RPC_StartBlueprintChunked(chunks.Count);
+        
+        // Отправляем каждый чанк
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            RPC_ReceiveBlueprintChunk(i, chunks[i]);
+        }
+        
+        Debug.Log($"{TAG} Blueprint отправлен новому игроку по частям успешно");
+    }
 }
