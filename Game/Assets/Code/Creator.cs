@@ -532,7 +532,16 @@ public class Creator : MonoBehaviour
         }
         if (button.gameObject.name == "ButtonLoad")
         {
-            LoadMachine();
+            // Открываем меню сохранений вместо прямой загрузки
+            var saveLoadSystem = FindObjectOfType<UI_SaveLoadSystem>();
+            if (saveLoadSystem != null)
+            {
+                saveLoadSystem.ShowMenu();
+            }
+            else
+            {
+                Debug.LogError("UI_SaveLoadSystem not found in scene!");
+            }
             return;
         }
         if (button.gameObject.name == "ButtonUnDo")
@@ -754,7 +763,7 @@ public class Creator : MonoBehaviour
         Debug.Log("Play mode toggled via button");
     }
 
-    private MachineData CreateMachineData(string Machine_name)
+    public MachineData CreateMachineData(string Machine_name)
     {
         // Debug.Log($"Total cells in scene: {cells.Count}");
 
@@ -807,7 +816,7 @@ public class Creator : MonoBehaviour
         return cellData;
     }
 
-    private void LoadMachineData(MachineData data)
+    public void LoadMachineData(MachineData data)
     {
         Debug.Log("=== LoadMachineData started ===");
         Debug.Log($"Available prefabs count: {prefabs.Count}");
@@ -992,5 +1001,32 @@ public class Creator : MonoBehaviour
 
         // Очищаем redo стек при новом действии
         redoStack.Clear();
+    }
+
+    // Метод для создания Machine из сохраненных данных
+    public void CreateMachineFromData(MachineData data)
+    {
+        Debug.Log("=== CreateMachineFromData started ===");
+        
+        // Сначала загружаем данные в Creator
+        LoadMachineData(data);
+        
+        // Теперь создаем Machine через MachineSpawnClient
+        var spawnClient = FindObjectOfType<MachineSpawnClient>();
+        if (spawnClient != null)
+        {
+            spawnClient.RequestSpawnFromCreator();
+            Debug.Log("Machine creation requested via MachineSpawnClient");
+            
+            // Переключаемся в режим симуляции
+            if (_play != null)
+            {
+                _play.TogglePlayMode();
+            }
+        }
+        else
+        {
+            Debug.LogError("MachineSpawnClient not found in scene!");
+        }
     }
 }

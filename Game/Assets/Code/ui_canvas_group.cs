@@ -32,10 +32,14 @@ public class ui_canvas_group : MonoBehaviour
         if (states_to_hide.Contains(state))
         {
             canvas_group.alpha = 0;
+            canvas_group.interactable = false;
+            canvas_group.blocksRaycasts = false;
         }
         else
         {
             canvas_group.alpha = 1;
+            canvas_group.interactable = true;
+            canvas_group.blocksRaycasts = true;
         }
     }
 }
