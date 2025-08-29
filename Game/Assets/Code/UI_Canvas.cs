@@ -270,6 +270,13 @@ public class UI_Canvas : MonoBehaviour
 
     public void SelectSubButton(UI_Button button, int subGroupIndex)
     {
+        // Проверяем границы массива
+        if (subGroupIndex < 0 || subGroupIndex >= selectedSubButtons.Length)
+        {
+            Debug.LogWarning($"SelectSubButton: subGroupIndex {subGroupIndex} out of bounds [0, {selectedSubButtons.Length - 1}]");
+            return;
+        }
+
         foreach (var sub in all_sub_buttons)
             if (sub.subGroupIndex == subGroupIndex)
                 ResetButtonColor(sub);

@@ -62,6 +62,10 @@ public class Creator : MonoBehaviour
         PlacePrefabs();
         CreateCameraWitPivot();
         LoadUI();
+        
+        // Загружаем текущую машину при старте игры
+        LoadCurrentMachineOnStart();
+        
         Debug.Log("=== Creator Awake completed ===");
     }
 
@@ -691,6 +695,30 @@ public class Creator : MonoBehaviour
         {
             Debug.LogError($"Error loading machine: {e.Message}");
             Debug.LogError($"Stack trace: {e.StackTrace}");
+        }
+    }
+
+    /// <summary>
+    /// Загружает текущую машину при старте игры из PlayerPrefs
+    /// </summary>
+    private void LoadCurrentMachineOnStart()
+    {
+        const string CURRENT_KEY_PREF = "current_machine_key";
+        string currentKey = PlayerPrefs.GetString(CURRENT_KEY_PREF, "machine_0");
+        
+        Debug.Log($"[Creator] Загружаем текущую машину: {currentKey}");
+        
+        // Проверяем, что машина существует
+        if (PlayerPrefs.HasKey(currentKey))
+        {
+            LoadMachine(currentKey);
+            Debug.Log($"[Creator] Машина {currentKey} успешно загружена");
+        }
+        else
+        {
+            Debug.LogWarning($"[Creator] Машина {currentKey} не найдена, используем автосейв");
+            // Пытаемся загрузить автосейв
+            LoadMachine("machine_0");
         }
     }
 

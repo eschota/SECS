@@ -149,8 +149,16 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             case ButtonType.Type:
                 UI_Canvas.i.SelectTypeButton(this);
                 break;
-            case ButtonType.Sub:                
-                UI_Canvas.i.SelectSubButton(this, subGroupIndex);
+            case ButtonType.Sub:
+                // Проверяем, что subGroupIndex в допустимых пределах
+                if (subGroupIndex >= 0 && subGroupIndex < UI_Canvas.i.selectedSubButtons.Length)
+                {
+                    UI_Canvas.i.SelectSubButton(this, subGroupIndex);
+                }
+                else
+                {
+                    Debug.LogWarning($"UI_Button {name}: subGroupIndex {subGroupIndex} out of bounds [0, {UI_Canvas.i.selectedSubButtons.Length - 1}]");
+                }
                 break;
         }
     }
