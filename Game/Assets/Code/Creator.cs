@@ -72,7 +72,7 @@ public class Creator : MonoBehaviour
     void Update()
     {
         if (Play.i.currentState != Play.State.Create) return;
-
+        if(Input.mousePosition.x<200 || Input.mousePosition.y<200||Input.mousePosition.x>Screen.width-200 || Input.mousePosition.y>Screen.height-200)return;
         // Проверяем состояние Play - если в режиме симуляции, не выполняем создание
         if (_play != null && _play.currentState == Play.State.Create)
         {
