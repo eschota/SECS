@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public class ui_canvas_group : MonoBehaviour
 {
     [SerializeField] List<Play.State> states_to_hide;
+    [SerializeField] List<Play.State> states_to_show;
     [SerializeField] CanvasGroup canvas_group;
     private RectTransform rectTransform;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -29,17 +30,18 @@ public class ui_canvas_group : MonoBehaviour
     {
         // Debug.Log($"gameobject: {gameObject.name}");
         // Debug.Log($"OnPlayStateChange: {state}");
+        if (states_to_show.Contains(state))
+        {
+            canvas_group.alpha = 1;
+            canvas_group.interactable = true;
+            canvas_group.blocksRaycasts = true;
+            return;
+        }
         if (states_to_hide.Contains(state))
         {
             canvas_group.alpha = 0;
             canvas_group.interactable = false;
             canvas_group.blocksRaycasts = false;
-        }
-        else
-        {
-            canvas_group.alpha = 1;
-            canvas_group.interactable = true;
-            canvas_group.blocksRaycasts = true;
         }
     }
 }

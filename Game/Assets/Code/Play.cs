@@ -10,6 +10,8 @@ public class Play : MonoBehaviour
         Create,
         SimulateLocal,
         SimulateOnline,
+        SaveLoad,
+        None
         
     }
     

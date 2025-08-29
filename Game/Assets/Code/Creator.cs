@@ -527,21 +527,12 @@ public class Creator : MonoBehaviour
         }
         if (button.gameObject.name == "ButtonSave")
         {
-            SaveMachine();
+            SaveMachine("");
             return;
         }
         if (button.gameObject.name == "ButtonLoad")
         {
-            // Открываем меню сохранений вместо прямой загрузки
-            var saveLoadSystem = FindObjectOfType<UI_SaveLoadSystem>();
-            if (saveLoadSystem != null)
-            {
-                saveLoadSystem.ShowMenu();
-            }
-            else
-            {
-                Debug.LogError("UI_SaveLoadSystem not found in scene!");
-            }
+            
             return;
         }
         if (button.gameObject.name == "ButtonUnDo")
@@ -626,16 +617,23 @@ public class Creator : MonoBehaviour
     private List<MachineData> redoStack = new List<MachineData>();
     private const int maxUndoSteps = 20;
 
-    private void SaveMachine()
+    public void SaveMachine(string machine_name)
     {
-        Debug.Log("=== SaveMachine started ===");
-
+        
         // Создаем автосейв с ротацией
         int currentCounter = PlayerPrefs.GetInt("auto_save_counter", 0);
         currentCounter = (currentCounter % 5) + 1; // Ротация от 1 до 5
-
-        string saveKey = "auto_save_" + currentCounter;
-        Debug.Log($"Saving to key: {saveKey}");
+ 
+        string saveKey ="";
+        Debug.Log("=== SaveMachine started ===");
+        if (string.IsNullOrEmpty(machine_name))
+        {
+           saveKey= "auto_save_" + currentCounter;
+        }
+        else
+        {
+            saveKey = "machine_" + machine_name;
+        }
 
         MachineData machineData = CreateMachineData(saveKey);
         Debug.Log($"MachineData created with {machineData?.cells?.Count ?? 0} cells");
@@ -650,7 +648,7 @@ public class Creator : MonoBehaviour
         Debug.Log($"Machine saved to {saveKey}");
     }
 
-    private void LoadMachine()
+    public void LoadMachine(string loadKey)
     {
         Debug.Log("=== LoadMachine started ===");
 
@@ -663,8 +661,10 @@ public class Creator : MonoBehaviour
             Debug.Log("No auto saves found");
             return;
         }
-
-        string loadKey = "auto_save_" + lastCounter;
+        if (string.IsNullOrEmpty(loadKey))
+        {
+            loadKey = "auto_save_" + lastCounter;
+        }
         Debug.Log($"Loading from key: {loadKey}");
 
         string json = PlayerPrefs.GetString(loadKey, "");
@@ -816,7 +816,7 @@ public class Creator : MonoBehaviour
         return cellData;
     }
 
-    public void LoadMachineData(MachineData data)
+    private void LoadMachineData(MachineData data)
     {
         Debug.Log("=== LoadMachineData started ===");
         Debug.Log($"Available prefabs count: {prefabs.Count}");
@@ -1001,32 +1001,5 @@ public class Creator : MonoBehaviour
 
         // Очищаем redo стек при новом действии
         redoStack.Clear();
-    }
-
-    // Метод для создания Machine из сохраненных данных
-    public void CreateMachineFromData(MachineData data)
-    {
-        Debug.Log("=== CreateMachineFromData started ===");
-        
-        // Сначала загружаем данные в Creator
-        LoadMachineData(data);
-        
-        // Теперь создаем Machine через MachineSpawnClient
-        var spawnClient = FindObjectOfType<MachineSpawnClient>();
-        if (spawnClient != null)
-        {
-            spawnClient.RequestSpawnFromCreator();
-            Debug.Log("Machine creation requested via MachineSpawnClient");
-            
-            // Переключаемся в режим симуляции
-            if (_play != null)
-            {
-                _play.TogglePlayMode();
-            }
-        }
-        else
-        {
-            Debug.LogError("MachineSpawnClient not found in scene!");
-        }
     }
 }

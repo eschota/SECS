@@ -738,6 +738,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 31f246b26d31bae4a8c6711b72e886c8, type: 2}
   - {fileID: 11400000, guid: 802e782ae10a95f419c3838dd4ce8df6, type: 2}
   - {fileID: 11400000, guid: 35b9cb0a1998f2a42bf7da5803f01b43, type: 2}
+  - {fileID: 11400000, guid: e68c6277cbd62d24691a11d50d870a2a, type: 2}
+  - {fileID: 11400000, guid: 500bc2e222927d7428b4c780871d80bc, type: 2}
+  - {fileID: 11400000, guid: 40fa010b7f9c84b47b525fdaca26ef11, type: 2}
+  - {fileID: 11400000, guid: 9a610f8cf0d17b846887e7f87a9ffdc5, type: 2}
   - {fileID: 11400000, guid: 535dc4d1e6bc15744a17d4dbd90629e3, type: 2}
   current_prefab_position: {x: 0, y: 0, z: 0}
 --- !u!4 &646896356

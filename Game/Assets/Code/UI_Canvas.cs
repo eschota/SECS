@@ -37,7 +37,7 @@ public class UI_Canvas : MonoBehaviour
             UI_ChangeState?.Invoke(null);
         }
     }
-
+    [SerializeField] UI_SaveLoadSystem saveLoadSystem;
     [SerializeField] List<RectTransform> CreateSubs;
     [SerializeField] public Transform ui_camera;
 

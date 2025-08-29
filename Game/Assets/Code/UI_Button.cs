@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 
 public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
+    [SerializeField] Play.State state_to_show = Play.State.None;
     public item_SO Item;
     public Image Targetimage;
     public float scalePercentage = 20f;
@@ -74,9 +75,13 @@ public class UI_Button : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             StopCoroutine(_clickCoroutine);
         }
         _clickCoroutine = StartCoroutine(ClickPulse());
-        
+
         // Handle selection
         HandleSelection();
+        if (state_to_show != Play.State.None)
+        {
+            Play.i.currentState = state_to_show;
+        }
     }
 
     System.Collections.IEnumerator ClickPulse()
