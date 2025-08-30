@@ -149,9 +149,37 @@ public class PlayerController : NetworkBehaviour
                 weapon.InitializeWeapon(Runner);
                 // Debug.Log($"Weapon {weapon.name}: idx={weapon.weapon_SO.weapon_index} ammo {weapon.GetCurrentAmmo()}/{weapon.GetMaxAmmo()}");
             }
-            else
+                         else
+             {
+                 Debug.LogWarning($"PlayerController: Оружие {weapon.name} не имеет Weapon_SO!");
+             }
+         }
+     }
+
+    /// <summary>
+    /// Очищает уничтоженные двигатели из списка
+    /// </summary>
+    private void CleanupDestroyedEngines()
+    {
+        for (int i = engines.Count - 1; i >= 0; i--)
+        {
+            if (engines[i] == null)
             {
-                Debug.LogWarning($"PlayerController: Оружие {weapon.name} не имеет Weapon_SO!");
+                engines.RemoveAt(i);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Очищает уничтоженное оружие из списка
+    /// </summary>
+    private void CleanupDestroyedWeapons()
+    {
+        for (int i = weapons.Count - 1; i >= 0; i--)
+        {
+            if (weapons[i] == null)
+            {
+                weapons.RemoveAt(i);
             }
         }
     }
@@ -166,6 +194,9 @@ public class PlayerController : NetworkBehaviour
 
     private void HandleEngineControlNetwork()
     {
+        // Очищаем уничтоженные двигатели из списка
+        CleanupDestroyedEngines();
+        
         if (engines.Count == 0 || machineRigidbody == null) return;
 
         // Перегрев — глушим тягу
@@ -276,6 +307,9 @@ public class PlayerController : NetworkBehaviour
     // ───────────────────────────── ОРУЖИЕ / ВВОД ────────────────────────────────
     private void HandleWeaponControl()
     {
+        // Очищаем уничтоженное оружие из списка
+        CleanupDestroyedWeapons();
+        
         if (weapons.Count == 0) return;
 
         // Направление стрельбы — вперёд от камеры по горизонту (ориентация пули берётся по pivot Z в io_weapon)

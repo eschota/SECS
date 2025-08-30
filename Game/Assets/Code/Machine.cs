@@ -9,7 +9,7 @@ using UnityEngine;
 // БЫЛО: [RequireComponent(typeof(NetworkTransform))] // конфликтует с физикой
 // СТАЛО: используем сетевую физику
 // или NetworkRigidbody, если у вас так называется 
-public class Machine : NetworkBehaviour
+public partial class Machine : NetworkBehaviour
 {
     [Header("Build Target")]
     [SerializeField] private Transform visualRoot;   // сюда инстансим клетки (если пусто — возьмём transform)
@@ -34,6 +34,40 @@ public class Machine : NetworkBehaviour
     private List<byte[]> receivedChunks = new List<byte[]>();
     private int expectedChunks = 0;
     private int receivedChunksCount = 0;
+private const string G = "<color=#00FF00>";
+    private const string GE = "</color>";
+
+    // Удаление «клетки» по мировой позиции (округляем до сетки 1х1х1) с подсказкой по имени
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    public void RPC_DestroyCellAt(Vector3 worldPos, string nameHint)
+    {
+        Vector3Int key = RoundToInt(worldPos);
+
+        var cells = GetComponentsInChildren<io_base>(true);
+
+        io_base target = cells.FirstOrDefault(c =>
+        {
+            // приоритет — точное совпадение позиции по сетке
+            Vector3Int cpos = RoundToInt(c.target_world_position != Vector3.zero ? c.target_world_position : c.transform.position);
+            if (cpos == key) return true;
+            // запасной вариант — совпадение имени
+            return !string.IsNullOrEmpty(nameHint) && c.gameObject.name == nameHint;
+        });
+
+        if (target)
+        {
+            Debug.Log($"{G}[Machine/Damage] Destroy cell '{target.name}' at ~{key}{GE}");
+            Destroy(target.gameObject);
+            // при необходимости можно пересчитать габариты/массу здесь
+        }
+        else
+        {
+            Debug.Log($"{G}[Machine/Damage] Cell not found at ~{key} (hint='{nameHint}'){GE}");
+        }
+    }
+
+    private static Vector3Int RoundToInt(Vector3 p) =>
+        new Vector3Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y), Mathf.RoundToInt(p.z));
 
     public override void Spawned()
     {
@@ -343,4 +377,89 @@ public class Machine : NetworkBehaviour
         
         Debug.Log($"{TAG} Blueprint отправлен новому игроку по частям успешно");
     }
+} 
+
+public partial class Machine : NetworkBehaviour
+{
+    [SerializeField] private string _hitVfxResourcePath = "VFX/Hit_Default";
+ 
+
+    /// <summary>
+    /// Клиент стрелявшего вызывает это на ЧУЖОЙ машине.
+    /// Дойдёт на владельца (StateAuthority) и там выполнится.
+    /// </summary>
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority, Channel = RpcChannel.Reliable)]
+    public void RPC_RequestDamage(Vector3 worldPos, string nameHint, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        Debug.Log($"{G}[Machine/Damage] RPC_RequestDamage from client: pos~{Round(worldPos)} hint='{nameHint}'{GE}");
+
+        // На владельце применяем урон и рассылаем "всем"
+        RPC_ApplyDamage(worldPos, nameHint, hitPoint, hitNormal);
+    }
+
+    /// <summary>
+    /// Выполняется на всех: спавнит VFX и удаляет клетку локально.
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    private void RPC_ApplyDamage(Vector3 worldPos, string nameHint, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        // VFX
+        var prefab = Resources.Load<GameObject>(_hitVfxResourcePath);
+        if (prefab)
+        {
+            var rot = Quaternion.LookRotation(hitNormal.sqrMagnitude > 1e-6f ? hitNormal.normalized : Vector3.up);
+            var fx  = GameObject.Instantiate(prefab, hitPoint, rot);
+            GameObject.Destroy(fx, 3f);
+            Debug.Log($"{G}[Machine/VFX] Spawn '{prefab.name}' at {Round(hitPoint)}{GE}");
+        }
+        else
+        {
+            Debug.Log($"{G}[Machine/VFX] Prefab not found Resources/{_hitVfxResourcePath}{GE}");
+        }
+
+        // Удаление клетки на каждом клиенте
+        LocalDestroyCellAt(worldPos, nameHint);
+    }
+
+    /// <summary>Локально у каждого клиента удаляет одну «клетку».</summary>
+    public void LocalDestroyCellAt(Vector3 worldPos, string nameHint)
+    {
+        Vector3Int key = new Vector3Int(
+            Mathf.RoundToInt(worldPos.x),
+            Mathf.RoundToInt(worldPos.y),
+            Mathf.RoundToInt(worldPos.z)
+        );
+
+        var cells = GetComponentsInChildren<io_base>(true);
+
+        io_base target = cells.FirstOrDefault(c =>
+        {
+            Vector3 p = (c.target_world_position != Vector3.zero)
+                        ? c.target_world_position
+                        : c.transform.position;
+
+            Vector3Int cp = new Vector3Int(
+                Mathf.RoundToInt(p.x),
+                Mathf.RoundToInt(p.y),
+                Mathf.RoundToInt(p.z)
+            );
+
+            if (cp == key) return true;
+            return !string.IsNullOrEmpty(nameHint) && c.gameObject.name == nameHint;
+        });
+
+        if (target)
+        {
+            Debug.Log($"{G}[Machine/Damage] Destroy cell '{target.name}' at ~{key}{GE}");
+            Destroy(target.gameObject);
+            // TODO: пересчитать массу/центр/баунды/радиус при необходимости
+        }
+        else
+        {
+            Debug.Log($"{G}[Machine/Damage] Cell not found at ~{key} (hint='{nameHint}'){GE}");
+        }
+    }
+
+    private static string Round(Vector3 v) =>
+        $"({v.x:F2}, {v.y:F2}, {v.z:F2})";
 }
