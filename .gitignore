@@ -77,3 +77,14 @@ crashlytics-build.properties
 /SECS_HDRP/Temp
 /Game/Library
 /Game/Temp
+
+# Unity folders to ignore anywhere in the repo (nested projects included)
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Bb]uild/
+**/[Bb]uilds/
+**/[Ll]ogs/
+**/[Uu]ser[Ss]ettings/
+**/[Ll]ibrary/[Pp]ackage[Cc]ache/
+**/[Pp]ackage[Cc]ache/
