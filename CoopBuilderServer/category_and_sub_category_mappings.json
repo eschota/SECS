@@ -1,0 +1,290 @@
+const categories = [
+    {
+        "categoryName": "Aircraft",
+        "categoryId": 1,
+        "subcategories": [
+            { "subcategoryId": 2, "subcategoryName": "Part" },
+            { "subcategoryId": 3, "subcategoryName": "Commercial" },
+            { "subcategoryId": 4, "subcategoryName": "Helicopter" },
+            { "subcategoryId": 5, "subcategoryName": "Historic" },
+            { "subcategoryId": 6, "subcategoryName": "Jet" },
+            { "subcategoryId": 7, "subcategoryName": "Military" },
+            { "subcategoryId": 8, "subcategoryName": "Other" },
+            { "subcategoryId": 9, "subcategoryName": "Private" }
+        ]
+    },
+    {
+        "categoryName": "Animals",
+        "categoryId": 10,
+        "subcategories": [
+            { "subcategoryId": 11, "subcategoryName": "Bird" },
+            { "subcategoryId": 12, "subcategoryName": "Dinosaur" },
+            { "subcategoryId": 13, "subcategoryName": "Fish" },
+            { "subcategoryId": 14, "subcategoryName": "Insect" },
+            { "subcategoryId": 15, "subcategoryName": "Mammal" },
+            { "subcategoryId": 16, "subcategoryName": "Other" },
+            { "subcategoryId": 17, "subcategoryName": "Reptile" }
+        ]
+    },
+    {
+        "categoryName": "Architectural",
+        "categoryId": 18,
+        "subcategories": [
+            { "subcategoryId": 19, "subcategoryName": "Engineering" },
+            { "subcategoryId": 20, "subcategoryName": "Decoration" },
+            { "subcategoryId": 21, "subcategoryName": "Door" },
+            { "subcategoryId": 22, "subcategoryName": "Fixture" },
+            { "subcategoryId": 23, "subcategoryName": "Floor" },
+            { "subcategoryId": 24, "subcategoryName": "Lighting" },
+            { "subcategoryId": 25, "subcategoryName": "Other" },
+            { "subcategoryId": 26, "subcategoryName": "Street" },
+            { "subcategoryId": 847, "subcategoryName": "Window" }
+        ]
+    },
+    {
+        "categoryName": "Exterior",
+        "categoryId": 27,
+        "subcategories": [
+            { "subcategoryId": 28, "subcategoryName": "Stadium" },
+            { "subcategoryId": 29, "subcategoryName": "Cityscape" },
+            { "subcategoryId": 30, "subcategoryName": "Office" },
+            { "subcategoryId": 31, "subcategoryName": "Historic" },
+            { "subcategoryId": 32, "subcategoryName": "House" },
+            { "subcategoryId": 33, "subcategoryName": "Industrial" },
+            { "subcategoryId": 34, "subcategoryName": "Landmark" },
+            { "subcategoryId": 35, "subcategoryName": "Landscape" },
+            { "subcategoryId": 36, "subcategoryName": "Other" },
+            { "subcategoryId": 37, "subcategoryName": "Sci-fi" },
+            { "subcategoryId": 38, "subcategoryName": "Skyscraper" },
+            { "subcategoryId": 39, "subcategoryName": "Street" },
+            { "subcategoryId": 155, "subcategoryName": "Public" }
+        ]
+    },
+    {
+        "categoryName": "Interior",
+        "categoryId": 40,
+        "subcategories": [
+            { "subcategoryId": 41, "subcategoryName": "Bathroom" },
+            { "subcategoryId": 42, "subcategoryName": "Bedroom" },
+            { "subcategoryId": 43, "subcategoryName": "Hall" },
+            { "subcategoryId": 44, "subcategoryName": "House" },
+            { "subcategoryId": 46, "subcategoryName": "Kitchen" },
+            { "subcategoryId": 47, "subcategoryName": "Living Room" },
+            { "subcategoryId": 48, "subcategoryName": "Office" },
+            { "subcategoryId": 49, "subcategoryName": "Other" }
+        ]
+    },
+    {
+        "categoryName": "Car",
+        "categoryId": 50,
+        "subcategories": [
+            { "subcategoryId": 51, "subcategoryName": "Antique" },
+            { "subcategoryId": 52, "subcategoryName": "Concept" },
+            { "subcategoryId": 53, "subcategoryName": "SUV" },
+            { "subcategoryId": 54, "subcategoryName": "Luxury" },
+            { "subcategoryId": 55, "subcategoryName": "Racing" },
+            { "subcategoryId": 56, "subcategoryName": "Sport" },
+            { "subcategoryId": 57, "subcategoryName": "Standard" }
+        ]
+    },
+    {
+        "categoryName": "Character",
+        "categoryId": 58,
+        "subcategories": [
+            { "subcategoryId": 59, "subcategoryName": "Anatomy" },
+            { "subcategoryId": 60, "subcategoryName": "Child" },
+            { "subcategoryId": 61, "subcategoryName": "Clothing" },
+            { "subcategoryId": 62, "subcategoryName": "Fantasy" },
+            { "subcategoryId": 63, "subcategoryName": "Man" },
+            { "subcategoryId": 64, "subcategoryName": "Other" },
+            { "subcategoryId": 65, "subcategoryName": "Sci-Fi" },
+            { "subcategoryId": 66, "subcategoryName": "Woman" }
+        ]
+    },
+    {
+        "categoryName": "Electronics",
+        "categoryId": 67,
+        "subcategories": [
+            { "subcategoryId": 68, "subcategoryName": "Audio" },
+            { "subcategoryId": 69, "subcategoryName": "Computer" },
+            { "subcategoryId": 70, "subcategoryName": "Other" },
+            { "subcategoryId": 71, "subcategoryName": "Phone" },
+            { "subcategoryId": 72, "subcategoryName": "Video" }
+        ]
+    },
+    {
+        "categoryName": "Food",
+        "categoryId": 73,
+        "subcategories": [
+            { "subcategoryId": 74, "subcategoryName": "Beverage" },
+            { "subcategoryId": 75, "subcategoryName": "Fruit" },
+            { "subcategoryId": 76, "subcategoryName": "Other" },
+            { "subcategoryId": 77, "subcategoryName": "Vegetable" }
+        ]
+    },
+    {
+        "categoryName": "Furniture",
+        "categoryId": 78,
+        "subcategories": [
+            { "subcategoryId": 79, "subcategoryName": "Appliance" },
+            { "subcategoryId": 80, "subcategoryName": "Bed" },
+            { "subcategoryId": 81, "subcategoryName": "Cabinet" },
+            { "subcategoryId": 82, "subcategoryName": "Chair" },
+            { "subcategoryId": 83, "subcategoryName": "Outdoor" },
+            { "subcategoryId": 84, "subcategoryName": "Kitchen" },
+            { "subcategoryId": 85, "subcategoryName": "Lamp" },
+            { "subcategoryId": 86, "subcategoryName": "Other" },
+            { "subcategoryId": 87, "subcategoryName": "Sofa" },
+            { "subcategoryId": 88, "subcategoryName": "Table" },
+            { "subcategoryId": 89, "subcategoryName": "Tableware" },
+            { "subcategoryId": 90, "subcategoryName": "Furniture Set" }
+        ]
+    },
+    {
+        "categoryName": "Household",
+        "categoryId": 98,
+        "subcategories": [
+            { "subcategoryId": 99, "subcategoryName": "Kitchenware" },
+            { "subcategoryId": 100, "subcategoryName": "Other" },
+            { "subcategoryId": 101, "subcategoryName": "Tools" }
+        ]
+    },
+    {
+        "categoryName": "Industrial",
+        "categoryId": 102,
+        "subcategories": [
+            { "subcategoryId": 103, "subcategoryName": "Machine" },
+            { "subcategoryId": 104, "subcategoryName": "Other" },
+            { "subcategoryId": 105, "subcategoryName": "Part" },
+            { "subcategoryId": 106, "subcategoryName": "Tool" }
+        ]
+    },
+    {
+        "categoryName": "Plant",
+        "categoryId": 107,
+        "subcategories": [
+            { "subcategoryId": 108, "subcategoryName": "Conifer" },
+            { "subcategoryId": 109, "subcategoryName": "Flower" },
+            { "subcategoryId": 110, "subcategoryName": "Grass" },
+            { "subcategoryId": 111, "subcategoryName": "Leaf" },
+            { "subcategoryId": 112, "subcategoryName": "Other" },
+            { "subcategoryId": 113, "subcategoryName": "Pot Plant" },
+            { "subcategoryId": 114, "subcategoryName": "Bush" }
+        ]
+    },
+    {
+        "categoryName": "Science",
+        "categoryId": 115,
+        "subcategories": [
+            { "subcategoryId": 116, "subcategoryName": "Laboratory" },
+            { "subcategoryId": 117, "subcategoryName": "Medical" },
+            { "subcategoryId": 118, "subcategoryName": "Other" }
+        ]
+    },
+    {
+        "categoryName": "Space",
+        "categoryId": 119,
+        "subcategories": [
+            { "subcategoryId": 120, "subcategoryName": "Other" },
+            { "subcategoryId": 121, "subcategoryName": "Planet" },
+            { "subcategoryId": 122, "subcategoryName": "Spaceship" }
+        ]
+    },
+    {
+        "categoryName": "Sports",
+        "categoryId": 124,
+        "subcategories": [
+            { "subcategoryId": 125, "subcategoryName": "Game" },
+            { "subcategoryId": 126, "subcategoryName": "Book" },
+            { "subcategoryId": 127, "subcategoryName": "Equipment" },
+            { "subcategoryId": 128, "subcategoryName": "Music" },
+            { "subcategoryId": 129, "subcategoryName": "Toy" }
+        ]
+    },
+    {
+        "categoryName": "Vehicle",
+        "categoryId": 130,
+        "subcategories": [
+            { "subcategoryId": 131, "subcategoryName": "Bicycle" },
+            { "subcategoryId": 132, "subcategoryName": "Bus" },
+            { "subcategoryId": 133, "subcategoryName": "Industrial" },
+            { "subcategoryId": 134, "subcategoryName": "Military" },
+            { "subcategoryId": 135, "subcategoryName": "Motorcycle" },
+            { "subcategoryId": 136, "subcategoryName": "Other" },
+            { "subcategoryId": 137, "subcategoryName": "Part" },
+            { "subcategoryId": 138, "subcategoryName": "Sci-Fi" },
+            { "subcategoryId": 139, "subcategoryName": "Train" },
+            { "subcategoryId": 140, "subcategoryName": "Truck" }
+        ]
+    },
+    {
+        "categoryName": "Watercraft",
+        "categoryId": 141,
+        "subcategories": [
+            { "subcategoryId": 142, "subcategoryName": "Historic" },
+            { "subcategoryId": 143, "subcategoryName": "Industrial" },
+            { "subcategoryId": 144, "subcategoryName": "Military" },
+            { "subcategoryId": 145, "subcategoryName": "Other" },
+            { "subcategoryId": 146, "subcategoryName": "Recreational" }
+        ]
+    },
+    {
+        "categoryName": "Military",
+        "categoryId": 147,
+        "subcategories": [
+            { "subcategoryId": 148, "subcategoryName": "Armor" },
+            { "subcategoryId": 149, "subcategoryName": "Character" },
+            { "subcategoryId": 150, "subcategoryName": "Gun" },
+            { "subcategoryId": 151, "subcategoryName": "Melee" },
+            { "subcategoryId": 152, "subcategoryName": "Other" },
+            { "subcategoryId": 153, "subcategoryName": "Rocketry" },
+            { "subcategoryId": 154, "subcategoryName": "Vehicle" }
+        ]
+    },
+    {
+        "categoryName": "Scanned 3D Models",
+        "categoryId": 228,
+        "subcategories": [
+            { "subcategoryId": 229, "subcategoryName": "Various" }
+        ]
+    },
+    {
+        "categoryName": "Scripts / Plugins",
+        "categoryId": 230,
+        "subcategories": [
+            { "subcategoryId": 231, "subcategoryName": "Modelling" },
+            { "subcategoryId": 232, "subcategoryName": "Animation" },
+            { "subcategoryId": 233, "subcategoryName": "Rendering" },
+            { "subcategoryId": 234, "subcategoryName": "Lighting" },
+            { "subcategoryId": 235, "subcategoryName": "Texturing" },
+            { "subcategoryId": 236, "subcategoryName": "VFX" }
+        ]
+    },
+    {
+        "categoryName": "Engineering Parts",
+        "categoryId": 237,
+        "subcategories": [
+            { "subcategoryId": 238, "subcategoryName": "A.C.C.&S." },
+            { "subcategoryId": 239, "subcategoryName": "A.P.E. Technologies" },
+            { "subcategoryId": 240, "subcategoryName": "AB dostec - Dosiertechnik" },
+            // ... (остальные подкатегории Engineering Parts)
+        ]
+    },
+    {
+        "categoryName": "Various",
+        "categoryId": 315,
+        "subcategories": [
+            { "subcategoryId": 316, "subcategoryName": "Various models" }
+        ]
+    },
+    {
+        "categoryName": "Textures",
+        "categoryId": 849,
+        "subcategories": [
+            { "subcategoryId": 850, "subcategoryName": "Architectural" },
+            { "subcategoryId": 851, "subcategoryName": "Natural" },
+            { "subcategoryId": 852, "subcategoryName": "Decal" },
+            { "subcategoryId": 853, "subcategoryName": "Miscellaneous" }
+        ]
+    }
+];

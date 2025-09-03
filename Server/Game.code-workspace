@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../Game"
+		},
+		{
+			"path": "../../NDLWebServerBuild/wwwroot/Game/004"
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "Game.sln"
+	}
+}
