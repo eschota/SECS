@@ -1,0 +1,366 @@
+{
+  "title": "Техническое задание: CoopBuilderServer (ASP.NET Core Web API)",
+  "version": 1,
+  "overview": "Серверная часть для кооперативного 3D-конструктора сцен (Unity URP, WebGL). Минимально жизнеспособная версия: регистрация игроков, создание сцен, подключение нескольких игроков к одной сцене, поиск и выдача метаданных 3D-ассетов. Вся бизнес-логика изменений сцены проходит через HTTP API сервера. Photon Fusion 2 используется исключительно для сигналов/ивентов синхронизации (без передачи данных сцены).",
+  "constraints": {
+    "platform": "unity_urp_webgl",
+    "network_policy": "все взаимодействие по сети, без симуляций",
+    "events_engine": "photon_fusion_2_only_for_events",
+    "state_changes_transport": "only_http_via_aspnet_server"
+  },
+  "conventions": {
+    "serialization_case": "lower_case_with_underscores",
+    "api_base_path": "/api-game",
+    "datetime_format": "iso_8601_utc_z",
+    "id_format": "integers_for_players_and_scenes; guid_directory_names_for_assets",
+    "url_examples": {
+      "public_api_base": "https://renderfin.com/api-game",
+      "public_assets_root": "https://renderfin.com/glb_storage/{guid}/"
+    }
+  },
+  "runtime_config": {
+    "aspnetcore": {
+      "logging": {
+        "log_level": {
+          "default": "Information",
+          "microsoft_aspnetcore": "Warning"
+        }
+      },
+      "allowed_hosts": "*",
+      "kestrel": {
+        "endpoints": {
+          "http": {
+            "url": "http://localhost:3329"
+          }
+        }
+      }
+    },
+    "server_settings": {
+      "api_base_path": "/api-game",
+      "asset_storage_root": "c:/NDLWebServerBuild/wwwroot/glb_storage",
+      "public_base_url": "https://renderfin.com",
+      "cors": {
+        "allowed_origins": [
+          "https://renderfin.com"
+        ],
+        "allowed_methods": ["GET", "POST", "PUT", "DELETE"],
+        "allowed_headers": ["Content-Type", "Authorization"]
+      },
+      "asset_index": {
+        "format_version": 0,
+        "rebuild_on_start": true
+      }
+    },
+    "nginx_notes": "Nginx проксирует /api-game -> http://localhost:3329/api-game. В приложении установлен PathBase=/api-game."
+  },
+  "data_models": {
+    "player": {
+      "description": "Профиль игрока.",
+      "fields": [
+        { "name": "player_id", "type": "int", "notes": "инкремент с регистрации" },
+        { "name": "player_name", "type": "string", "notes": "по умолчанию player_id.ToString()" },
+        { "name": "player_avatar_url", "type": "string", "notes": "url до .png" },
+        { "name": "player_scenes", "type": "int[]", "notes": "идентификаторы сцен игрока" }
+      ]
+    },
+    "player_stats": {
+      "description": "Произвольная статистика игрока (расширяемая).",
+      "fields": [
+        { "name": "player_id", "type": "int" },
+        { "name": "values", "type": "object", "notes": "словарь произвольных метрик" }
+      ]
+    },
+    "scene": {
+      "description": "Сцена, создаваемая игроками.",
+      "fields": [
+        { "name": "scene_id", "type": "int", "notes": "инкремент" },
+        { "name": "owner_player_id", "type": "int" },
+        { "name": "creation_date", "type": "string(iso_8601_utc)" },
+        { "name": "last_update_date", "type": "string(iso_8601_utc)" },
+        { "name": "who_liked_scene", "type": "int[]" },
+        { "name": "who_disliked_scene", "type": "int[]" },
+        { "name": "scene_name", "type": "string", "notes": "по умолчанию scene_id.ToString()" },
+        { "name": "scene_preview_url", "type": "string", "notes": "url до .jpg" },
+        { "name": "assets", "type": "object[]", "notes": "массив ассетов сцены (упрощенно: ссылки на asset_guid и позиции)" }
+      ]
+    },
+    "scene_change": {
+      "description": "Единица изменения состояния сцены для синхронизации по HTTP.",
+      "fields": [
+        { "name": "scene_id", "type": "int" },
+        { "name": "change_id", "type": "long", "notes": "монотонно возрастающий идентификатор" },
+        { "name": "timestamp", "type": "string(iso_8601_utc)" },
+        { "name": "actor_player_id", "type": "int" },
+        { "name": "operation", "type": "string", "notes": "например: add_asset | update_asset | remove_asset | set_property" },
+        { "name": "payload", "type": "object", "notes": "детали изменения" }
+      ]
+    },
+    "asset_cache_entry": {
+      "description": "Кешированная запись ассета из локального хранилища glb_storage.",
+      "fields": [
+        { "name": "asset_guid", "type": "string", "notes": "имя папки GUID" },
+        { "name": "title", "type": "string" },
+        { "name": "is_character", "type": "bool" },
+        { "name": "keywords", "type": "string[]" },
+        { "name": "category_id", "type": "int" },
+        { "name": "sub_category_id", "type": "int" },
+        { "name": "preview_url", "type": "string", "notes": "{public_base_url}/glb_storage/{guid}/{guid}.png" },
+        { "name": "glb_url", "type": "string", "notes": "{public_base_url}/glb_storage/{guid}/{guid}.glb" },
+        { "name": "metadata_url", "type": "string", "notes": "{public_base_url}/glb_storage/{guid}/{guid}.json" }
+      ]
+    }
+  },
+  "persistence": {
+    "players": "sqlite_file",
+    "scenes": "sqlite_file",
+    "scene_changes": "sqlite_file_or_append_only_log",
+    "asset_cache": "in_memory_built_from_disk_at_startup",
+    "notes": "Для MVP используется SQLite. Позже можно заменить на PostgreSQL без изменения API."
+  },
+  "api": {
+    "players": [
+      {
+        "method": "GET",
+        "path": "/api-game-player",
+        "summary": "Получить всех игроков",
+        "response": { "items": "player[]" },
+        "codes": [200]
+      },
+      {
+        "method": "GET",
+        "path": "/api-game-player/{id}",
+        "summary": "Получить игрока по id",
+        "response": "player",
+        "codes": [200, 404]
+      },
+      {
+        "method": "POST",
+        "path": "/api-game-player",
+        "summary": "Создать нового игрока",
+        "request": { "player_name": "string(optional)", "player_avatar_url": "string(optional)" },
+        "response": "player",
+        "codes": [201]
+      },
+      {
+        "method": "PUT",
+        "path": "/api-game-player/{id}",
+        "summary": "Обновить игрока",
+        "request": { "player_name": "string", "player_avatar_url": "string" },
+        "response": "player",
+        "codes": [200, 404]
+      },
+      {
+        "method": "GET",
+        "path": "/api-game-player/{id}/stats",
+        "summary": "Получить статистику игрока",
+        "response": "player_stats",
+        "codes": [200, 404]
+      },
+      {
+        "method": "POST",
+        "path": "/api-game-player/{id}/stats",
+        "summary": "Обновить статистику игрока",
+        "request": "player_stats",
+        "response": "player_stats",
+        "codes": [200, 404]
+      },
+      {
+        "method": "DELETE",
+        "path": "/api-game-player/{id}",
+        "summary": "Удалить игрока",
+        "codes": [204, 404]
+      }
+    ],
+    "scenes": [
+      {
+        "method": "POST",
+        "path": "/api-game-scenes",
+        "summary": "Создать сцену",
+        "request": { "owner_player_id": "int", "scene_name": "string(optional)" },
+        "response": "scene",
+        "codes": [201, 400, 404]
+      },
+      {
+        "method": "GET",
+        "path": "/api-game-scenes/{id}",
+        "summary": "Получить сцену по id",
+        "response": "scene",
+        "codes": [200, 404]
+      },
+      {
+        "method": "POST",
+        "path": "/api-game-scenes/{id}/join",
+        "summary": "Присоединиться к сцене",
+        "request": { "player_id": "int" },
+        "response": { "ok": true },
+        "codes": [200, 404]
+      },
+      {
+        "method": "POST",
+        "path": "/api-game-scenes/{id}/leave",
+        "summary": "Покинуть сцену",
+        "request": { "player_id": "int" },
+        "response": { "ok": true },
+        "codes": [200, 404]
+      },
+      {
+        "method": "GET",
+        "path": "/api-game-scenes/{id}/changes",
+        "summary": "Получить изменения сцены после заданной метки",
+        "query": { "since_change_id": "long(optional)", "limit": "int(optional, default 200)" },
+        "response": { "items": "scene_change[]", "last_change_id": "long" },
+        "codes": [200, 404]
+      },
+      {
+        "method": "POST",
+        "path": "/api-game-scenes/{id}/changes",
+        "summary": "Записать изменение сцены",
+        "request": "scene_change (без scene_id/change_id; присваивает сервер)",
+        "response": { "change_id": "long", "timestamp": "string(iso_8601_utc)" },
+        "codes": [201, 400, 404]
+      }
+    ],
+    "assets": [
+      {
+        "method": "GET",
+        "path": "/api-game-assets/search",
+        "summary": "Поиск по кешу ассетов",
+        "query": {
+          "q": "string(optional, поиск по title и keywords)",
+          "category_id": "int(optional)",
+          "sub_category_id": "int(optional)",
+          "is_character": "bool(optional)",
+          "limit": "int(optional, default 50)",
+          "offset": "int(optional, default 0)"
+        },
+        "response": { "items": "asset_cache_entry[]", "total": "int" },
+        "codes": [200]
+      },
+      {
+        "method": "GET",
+        "path": "/api-game-assets/{guid}/meta",
+        "summary": "Получить кешированную метаинформацию одного ассета",
+        "response": "asset_cache_entry",
+        "codes": [200, 404]
+      }
+    ]
+  },
+  "asset_indexing": {
+    "storage_root": "c:/NDLWebServerBuild/wwwroot/glb_storage",
+    "expected_folder_structure": "{guid}/{guid}.glb, {guid}.json, {guid}.png",
+    "scan_on_start": true,
+    "cache_in_memory": true,
+    "parse_from_json": [
+      "title",
+      "isCharacter",
+      "categoryId",
+      "subcategoryId",
+      "keywords"
+    ],
+    "normalized_fields": {
+      "title": "string",
+      "is_character": "bool",
+      "category_id": "int",
+      "sub_category_id": "int",
+      "keywords": "string[]"
+    },
+    "bin_sidecar": {
+      "file_name_pattern": "{guid}.bin",
+      "format_version_from": "runtime_config.server_settings.asset_index.format_version",
+      "encoding": "utf8_strings, little_endian_integers",
+      "compression": "deflate",
+      "layout": [
+        "int32: format_version",
+        "int32: title_byte_length",
+        "bytes: title_utf8",
+        "byte: is_character (0|1)",
+        "int32: category_id",
+        "int32: sub_category_id",
+        "int32: keywords_count",
+        "repeat keywords_count times { int32: kw_len; bytes: kw_utf8 }"
+      ]
+    },
+    "reindexing_rules": "Если format_version изменился, при старте пересобрать все {guid}.bin и заново заполнить in-memory кеш.",
+    "search_capabilities": "поиск по title (substring, case-insensitive) и по ключевым словам; фильтры category_id, sub_category_id, is_character; пагинация offset/limit"
+  },
+  "photon_integration": {
+    "events_only": true,
+    "events": [
+      "player_joined_scene",
+      "player_left_scene",
+      "scene_changed_hint"
+    ],
+    "client_flow": "Клиент при получении scene_changed_hint вызывает GET /api-game-scenes/{id}/changes?since_change_id=... и применяет изменения локально. Позиции/позы игроков синхронизируются через Photon отдельно.",
+    "no_scene_payload_in_photon": true
+  },
+  "security": {
+    "auth_mvp": "минимальная – без сложной регистрации; выдача player_id при POST /api-game-player, дальнейшие запросы от имени этого player_id",
+    "rate_limit_basic": true,
+    "input_validation": true,
+    "logging": "access + warnings + errors",
+    "cors": "строгий белый список доменов из runtime_config.server_settings.cors"
+  },
+  "non_functional": {
+    "performance": "поиск по кешу ассетов – O(n) для MVP; допустимо до 100k записей; при росте – индекс в памяти",
+    "observability": "минимальные метрики: количество запросов, latency p50/p95, размер кеша ассетов",
+    "resilience": "graceful start/stop; обработка частично поврежденных json – пропуск с логом",
+    "i18n": "все данные как есть; сервер не переводит контент"
+  },
+  "deployment": {
+    "nginx_proxy_path": "/api-game",
+    "upstream": "http://localhost:3329",
+    "path_base": "/api-game",
+    "static_assets_served_by": "nginx",
+    "notes": "Папка glb_storage публикуется nginx напрямую по /glb_storage/. API – проксируется."
+  },
+  "acceptance_criteria": [
+    "Сервер стартует, сканирует glb_storage, создает/актуализирует {guid}.bin и наполняет кеш",
+    "Работают эндпоинты players (CRUD + stats)",
+    "Работают эндпоинты scenes (create/get/join/leave + запись и выборка changes)",
+    "Работают эндпоинты assets (search + meta)",
+    "Имена полей JSON соответствуют lower_case_with_underscores",
+    "NGINX отдает /glb_storage/* статически, а /api-game/* – проксирует к серверу",
+    "Unity клиент может: зарегистрироваться, создать сцену, присоединиться к сцене, выполнить изменение и получить его по HTTP после сигнала из Photon"
+  ],
+  "work_breakdown": [
+    "Инициализация проекта ASP.NET Core (.NET 8) с базовым конфигом и PathBase=/api-game",
+    "Модели и миграции SQLite: players, scenes, scene_changes",
+    "Сервис индексации ассетов: сканер, парсер json, генерация .bin, кеш в памяти, поиск",
+    "Реализация /api-game-player (CRUD + stats)",
+    "Реализация /api-game-scenes (create/get/join/leave + changes GET/POST)",
+    "Реализация /api-game-assets (search + meta)",
+    "CORS, базовый rate limiting, логирование",
+    "Конфигурация NGINX (проксирование /api-game, статика /glb_storage)",
+    "Смоук-тесты через Unity WebGL билд вручную"
+  ],
+  "appsettings_example": {
+    "Logging": {
+      "LogLevel": {
+        "Default": "Information",
+        "Microsoft.AspNetCore": "Warning"
+      }
+    },
+    "AllowedHosts": "*",
+    "Kestrel": {
+      "Endpoints": {
+        "Http": {
+          "Url": "http://localhost:3329"
+        }
+      }
+    },
+    "ServerSettings": {
+      "ApiBasePath": "/api-game",
+      "AssetStorageRoot": "c:/NDLWebServerBuild/wwwroot/glb_storage",
+      "PublicBaseUrl": "https://renderfin.com",
+      "Cors": {
+        "AllowedOrigins": ["https://renderfin.com"],
+        "AllowedMethods": ["GET", "POST", "PUT", "DELETE"],
+        "AllowedHeaders": ["Content-Type", "Authorization"]
+      },
+      "AssetIndex": {
+        "FormatVersion": 0,
+        "RebuildOnStart": true
+      }
+    }
+  }
+}
